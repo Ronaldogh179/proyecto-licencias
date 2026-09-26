@@ -1,0 +1,17 @@
+﻿fastapi
+uvicorn[standard]
+python-multipart
+pydantic
+pandas
+numpy
+scikit-learn
+xgboost
+pymupdf
+pytesseract
+Pillow
+supabase
+python-dotenv
+pyjwt
+pytest
+pytest-cov
+httpx
