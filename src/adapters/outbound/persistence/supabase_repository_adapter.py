@@ -33,7 +33,7 @@ class InMemoryUsuarioRepository(UsuarioRepositoryPort):
             ),
         }
 
-    def buscar_por_correo(self, correo: str) -> Optional[Usuario]:
+    def obtener_por_correo(self, correo: str) -> Optional[Usuario]:
         return self._usuarios.get(correo.strip().lower())
 
 
