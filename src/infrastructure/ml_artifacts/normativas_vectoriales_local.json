@@ -1,0 +1,30 @@
+[
+  {
+    "id_fragmento": "FRAG-HU06-INTEGRATION-5610-RDM",
+    "norma_origen": "Ordenanza Municipal N.° 018-2024-MDT/CM",
+    "articulo_inciso": "Artículo 12.º, inciso c) - Cuadro de Índice de Usos",
+    "codigo_ciiu": "5610",
+    "giro_comercial": "Restaurante",
+    "zona_urbana": "RDM",
+    "compatibilidad": "COMPATIBLE_CON_RESTRICCION",
+    "area_maxima_m2": 80.0,
+    "texto_fragmento_chunk": "Ordenanza Municipal N.° 018-2024-MDT/CM. Fragmento de integración para validar chunking 500/50 y persistencia vectorial pgvector.",
+    "tokens_chunk": 500,
+    "overlap_tokens": 50,
+    "similitud_coseno": 1.0
+  },
+  {
+    "id_fragmento": "FRAG-LEGACY-HU06-6910-CZ",
+    "norma_origen": "Ordenanza Municipal N.° 018-2024-MDT/CM",
+    "articulo_inciso": "Artículo 12.º, inciso c)",
+    "codigo_ciiu": "6910",
+    "giro_comercial": "Oficina",
+    "zona_urbana": "CZ",
+    "compatibilidad": "COMPATIBLE",
+    "area_maxima_m2": 100.0,
+    "texto_fragmento_chunk": "Fragmento normativo del router legacy PMV2.",
+    "tokens_chunk": 500,
+    "overlap_tokens": 50,
+    "similitud_coseno": 1.0
+  }
+]

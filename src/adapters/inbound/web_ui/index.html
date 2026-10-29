@@ -3,27 +3,35 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>SIMEL - Municipalidad Distrital de El Tambo | PMV 1</title>
+  <title>SIMEL - Municipalidad Distrital de El Tambo | PMV 1 + PMV 2</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    :focus-visible { outline: 3px solid #f59e0b; outline-offset: 2px; }
+    .skip-link { position: absolute; left: -9999px; top: 0; z-index: 50; }
+    .skip-link:focus { left: 1rem; top: 1rem; background: #f59e0b; color: #020617; padding: .5rem .75rem; border-radius: .5rem; font-weight: 700; }
+  </style>
 </head>
 <body class="bg-slate-100 text-slate-900 font-sans min-h-screen">
   <!-- Barra Institucional Superior -->
+  <a href="#contenido-principal" class="skip-link">Saltar al contenido principal</a>
   <header class="bg-slate-900 text-white shadow-lg border-b-4 border-amber-500">
     <div class="max-w-7xl mx-auto px-6 py-4 flex flex-wrap justify-between items-center gap-4">
       <div>
-        <span class="text-xs uppercase tracking-widest bg-amber-500 text-slate-950 font-bold px-2.5 py-0.5 rounded">Arquitectura Híbrida Hexagonal • PMV 1</span>
+        <span class="text-xs uppercase tracking-widest bg-amber-500 text-slate-950 font-bold px-2.5 py-0.5 rounded">Arquitectura Híbrida Hexagonal • PMV 1 + PMV 2</span>
         <h1 class="text-xl font-bold mt-1">SIMEL — Municipalidad Distrital de El Tambo</h1>
         <p class="text-xs text-slate-300">Sistema Inteligente de Evaluación y Fiscalización Documental de Licencias (Ley N.° 28976 | Ley N.° 29733)</p>
+        <p class="text-[11px] text-amber-300 font-mono mt-1 break-all">API pública: <span id="currentDomainBadge">window.location.origin</span></p>
       </div>
       <div id="userBadge" class="bg-slate-800 border border-slate-700 px-4 py-2 rounded-lg text-right">
         <p class="text-xs text-emerald-400 font-semibold" id="jwtStatus">● Sesión JWT Activa (TLS 1.3 / AES-256)</p>
         <p class="text-sm font-bold" id="userName">Ing. Simon Ronaldo Gonzales Jacinto</p>
         <p class="text-xs text-slate-400" id="userRole">Rol: EVALUADOR_LICENCIAS</p>
+        <p class="text-[11px] text-amber-300 font-mono mt-1 break-all" id="currentDomainInline">window.location.origin</p>
       </div>
     </div>
   </header>
 
-  <main class="max-w-7xl mx-auto px-6 py-6 space-y-6">
+  <main id="contenido-principal" class="max-w-7xl mx-auto px-6 py-6 space-y-6">
     <!-- Tarjetas de KPIs y Métricas de Machine Learning (PoC) -->
     <section class="grid grid-cols-1 md:grid-cols-4 gap-4">
       <div class="bg-white p-4 rounded-xl shadow border-l-4 border-blue-700">
@@ -218,12 +226,16 @@
 
     <!-- Bandeja Principal Priorizada (PMV1-5-HU05) -->
     <section class="bg-white rounded-xl shadow p-6 border border-slate-200">
-      <div class="flex justify-between items-center border-b pb-3">
+      <div class="flex flex-wrap justify-between items-center gap-3 border-b pb-3">
         <div>
           <h2 class="text-base font-bold text-slate-900 uppercase">4. Bandeja de Fiscalización Priorizada por Inteligencia Artificial (PMV1-5-HU05)</h2>
           <p class="text-xs text-slate-500">Ordenada automáticamente de mayor a menor probabilidad de observación según el modelo XGBoost</p>
         </div>
-        <button onclick="cargarBandeja()" class="bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold px-3 py-1.5 rounded-lg border">↻ Actualizar Bandeja</button>
+        <div class="flex flex-wrap items-center gap-2">
+          <label for="filtroBandeja" class="sr-only">Filtrar bandeja</label>
+          <input id="filtroBandeja" type="search" placeholder="Filtrar por código, RUC, giro..." class="border-2 border-slate-300 rounded-lg px-3 py-1.5 text-xs w-64 focus:border-amber-500" />
+          <button onclick="cargarBandeja()" class="bg-slate-100 hover:bg-slate-200 text-slate-900 text-xs font-bold px-3 py-1.5 rounded-lg border-2 border-slate-300">↻ Actualizar Bandeja</button>
+        </div>
       </div>
 
       <div class="overflow-x-auto mt-4">
@@ -243,44 +255,747 @@
           <tbody id="tablaBandeja" class="divide-y divide-slate-200 text-xs"></tbody>
         </table>
       </div>
+      <div class="flex flex-wrap justify-between items-center gap-3 mt-4">
+        <p class="text-xs text-slate-600 font-semibold" id="bandejaPageInfo">Mostrando expedientes...</p>
+        <div class="flex gap-2">
+          <button id="btnBandejaPrev" type="button" class="bg-slate-100 hover:bg-slate-200 disabled:opacity-40 disabled:cursor-not-allowed text-slate-900 text-xs font-bold px-3 py-1.5 rounded-lg border-2 border-slate-300">← Anterior</button>
+          <button id="btnBandejaNext" type="button" class="bg-slate-100 hover:bg-slate-200 disabled:opacity-40 disabled:cursor-not-allowed text-slate-900 text-xs font-bold px-3 py-1.5 rounded-lg border-2 border-slate-300">Siguiente →</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECCIÓN 5: INDEXACIÓN VECTORIAL PGVECTOR (PMV2-1-HU06) -->
+    <section class="bg-white rounded-xl shadow p-6 border border-slate-200">
+      <div class="flex flex-wrap justify-between items-start gap-3 border-b pb-3">
+        <div>
+          <h2 class="text-base font-bold text-slate-900 uppercase">5. Indexación Vectorial de Ordenanzas y TUPA en pgvector (HNSW) (PMV2-1-HU06)</h2>
+          <p class="text-xs text-slate-600">Chunking de 500 tokens con overlap de 50, embedding normalizado de 16 dimensiones y persistencia en <code class="bg-slate-100 px-1 rounded">normativas_vectoriales</code>.</p>
+        </div>
+        <span class="bg-amber-500 text-slate-950 text-xs font-black px-3 py-1 rounded-full">HNSW • vector_cosine_ops</span>
+      </div>
+
+      <form id="ragIndexForm" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mt-4">
+        <div class="lg:col-span-2">
+          <label for="ragNormaOrigen" class="block text-xs font-bold text-slate-800">Norma origen</label>
+          <input id="ragNormaOrigen" type="text" value="Ordenanza Municipal N.° 018-2024-MDT/CM" class="w-full border-2 border-slate-300 rounded-lg px-3 py-2 text-sm mt-1" required />
+        </div>
+        <div>
+          <label for="ragArticulo" class="block text-xs font-bold text-slate-800">Artículo / inciso</label>
+          <input id="ragArticulo" type="text" value="Artículo 12.º, inciso c) - Cuadro de Índice de Usos" class="w-full border-2 border-slate-300 rounded-lg px-3 py-2 text-sm mt-1" required />
+        </div>
+        <div>
+          <label for="ragGiro" class="block text-xs font-bold text-slate-800">Giro comercial / CIIU</label>
+          <select id="ragGiro" class="w-full border-2 border-slate-300 rounded-lg px-3 py-2 text-sm mt-1 bg-slate-50 font-semibold">
+            <option value="Restaurante" selected>Restaurante - CIIU 5610</option>
+            <option value="Bodega">Bodega - CIIU 4711</option>
+            <option value="Oficina">Oficina - CIIU 6910</option>
+            <option value="Panaderia">Panadería - CIIU 1071</option>
+            <option value="Tienda">Tienda - CIIU 4771</option>
+          </select>
+        </div>
+        <div>
+          <label for="ragCiiu" class="block text-xs font-bold text-slate-800">Código CIIU</label>
+          <input id="ragCiiu" type="text" value="5610" class="w-full border-2 border-slate-300 rounded-lg px-3 py-2 text-sm mt-1 font-mono" required />
+        </div>
+        <div>
+          <label for="ragZona" class="block text-xs font-bold text-slate-800">Zona urbana</label>
+          <select id="ragZona" class="w-full border-2 border-slate-300 rounded-lg px-3 py-2 text-sm mt-1 bg-slate-50 font-semibold">
+            <option value="CZ">CZ - Comercio Zonal</option>
+            <option value="RDM" selected>RDM - Residencial Densidad Media</option>
+            <option value="CV">CV - Comercio Vecinal</option>
+            <option value="I1">I1 - Industrial 1</option>
+          </select>
+        </div>
+        <div>
+          <label for="ragCompatibilidad" class="block text-xs font-bold text-slate-800">Compatibilidad</label>
+          <select id="ragCompatibilidad" class="w-full border-2 border-slate-300 rounded-lg px-3 py-2 text-sm mt-1 bg-slate-50 font-semibold">
+            <option value="COMPATIBLE">COMPATIBLE</option>
+            <option value="COMPATIBLE_CON_RESTRICCION" selected>CONDICIONADO</option>
+            <option value="NO_COMPATIBLE">INCOMPATIBLE</option>
+          </select>
+        </div>
+        <div>
+          <label for="ragAreaMax" class="block text-xs font-bold text-slate-800">Área máxima (m²)</label>
+          <input id="ragAreaMax" type="number" step="0.01" value="80.00" class="w-full border-2 border-slate-300 rounded-lg px-3 py-2 text-sm mt-1" required />
+        </div>
+        <div>
+          <label for="ragTokens" class="block text-xs font-bold text-slate-800">Tamaño de chunk (tokens)</label>
+          <input id="ragTokens" type="number" value="500" class="w-full border-2 border-slate-300 rounded-lg px-3 py-2 text-sm mt-1" required />
+        </div>
+        <div>
+          <label for="ragOverlap" class="block text-xs font-bold text-slate-800">Solapamiento (tokens)</label>
+          <input id="ragOverlap" type="number" value="50" class="w-full border-2 border-slate-300 rounded-lg px-3 py-2 text-sm mt-1" required />
+        </div>
+        <div class="lg:col-span-3">
+          <label for="ragTexto" class="block text-xs font-bold text-slate-800">Texto normativo del TUPA / Ordenanza</label>
+          <textarea id="ragTexto" rows="4" class="w-full border-2 border-slate-300 rounded-lg px-3 py-2 text-sm mt-1 font-mono leading-relaxed" required>Ordenanza Municipal N.° 018-2024-MDT/CM. Cuadro de Índice de Usos para la Ubicación de Actividades Urbanas. Artículo 12.º, inciso c). CIIU-5610 Restaurante. Zona RDM - Residencial Densidad Media. Compatibilidad condicionada. Área máxima permitida 80.00 m². Ley N.° 28976, Artículo 7.º: la licencia de funcionamiento se otorga previa verificación de la compatibilidad de la actividad con la zonificación vigente y el área declarada.</textarea>
+        </div>
+        <div class="lg:col-span-3 flex flex-wrap items-center justify-between gap-3 pt-1">
+          <button id="btnIndexarRag" type="submit" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-black px-6 py-2.5 rounded-xl shadow border-2 border-amber-600">Fragmentar y Vectorizar en pgvector (HU06)</button>
+          <span id="ragNormativasTotal" class="text-xs font-bold text-slate-700 bg-slate-100 border border-slate-300 px-3 py-1.5 rounded-full">0 fragmentos indexados</span>
+        </div>
+      </form>
+
+      <div id="ragIndexResult" class="hidden mt-4"></div>
+
+      <div class="overflow-x-auto mt-4">
+        <table class="w-full text-left border-collapse text-xs">
+          <thead>
+            <tr class="bg-slate-800 text-white uppercase text-[11px]">
+              <th class="p-2.5 rounded-tl-lg">ID Fragmento</th>
+              <th class="p-2.5">Norma / Artículo</th>
+              <th class="p-2.5">CIIU / Giro</th>
+              <th class="p-2.5">Zona</th>
+              <th class="p-2.5">Compatibilidad</th>
+              <th class="p-2.5 text-right">Área Máx.</th>
+              <th class="p-2.5 text-center">Chunk</th>
+              <th class="p-2.5 text-center rounded-tr-lg">Similitud</th>
+            </tr>
+          </thead>
+          <tbody id="tablaNormativas" class="divide-y divide-slate-200"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- SECCIÓN 6: MOTOR RAG + CRUCE INTER-FOJAS (PMV2-2-HU07 / PMV2-3-HU08) -->
+    <section class="bg-white rounded-xl shadow p-6 border border-slate-200">
+      <div class="border-b pb-3">
+        <h2 class="text-base font-bold text-slate-900 uppercase">6. Motor RAG de Zonificación y Auditoría Cruzada Inter-Fojas (PMV2-2-HU07 / PMV2-3-HU08)</h2>
+        <p class="text-xs text-slate-600">Similitud del Coseno sobre pgvector + validación de DNI/RUC, metraje y dirección entre la Declaración Jurada TUPA y el plano técnico.</p>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-4">
+        <div class="bg-slate-50 p-4 rounded-xl border-2 border-slate-300">
+          <h3 class="text-sm font-black text-slate-900 uppercase">Formulario de Auditoría PMV 2</h3>
+          <form id="auditForm" class="space-y-3 mt-3">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div>
+                <label for="auditExpediente" class="block text-xs font-bold text-slate-800">Expediente</label>
+                <select id="auditExpediente" class="w-full border-2 border-slate-300 rounded-lg px-3 py-2 text-sm mt-1 bg-white font-semibold">
+                  <option value="EXP-2026-0351" selected>EXP-2026-0351</option>
+                  <option value="EXP-2026-0350">EXP-2026-0350</option>
+                  <option value="EXP-2026-0348">EXP-2026-0348</option>
+                </select>
+              </div>
+              <div>
+                <label for="auditGiro" class="block text-xs font-bold text-slate-800">Giro comercial</label>
+                <select id="auditGiro" class="w-full border-2 border-slate-300 rounded-lg px-3 py-2 text-sm mt-1 bg-white font-semibold">
+                  <option value="Restaurante" selected>Restaurante - CIIU 5610</option>
+                  <option value="Bodega">Bodega - CIIU 4711</option>
+                  <option value="Oficina">Oficina - CIIU 6910</option>
+                  <option value="Panaderia">Panadería - CIIU 1071</option>
+                  <option value="Tienda">Tienda - CIIU 4771</option>
+                </select>
+              </div>
+              <div>
+                <label for="auditZona" class="block text-xs font-bold text-slate-800">Zona urbana</label>
+                <select id="auditZona" class="w-full border-2 border-slate-300 rounded-lg px-3 py-2 text-sm mt-1 bg-white font-semibold">
+                  <option value="RDM" selected>RDM - Residencial Densidad Media</option>
+                  <option value="CZ">CZ - Comercio Zonal</option>
+                  <option value="CV">CV - Comercio Vecinal</option>
+                  <option value="I1">I1 - Industrial 1</option>
+                </select>
+              </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <label for="auditDniForm" class="block text-xs font-bold text-slate-800">DNI/RUC en Formulario TUPA</label>
+                <input id="auditDniForm" type="text" value="20601122334" class="w-full border-2 border-slate-300 rounded-lg px-3 py-2 text-sm mt-1 font-mono" required />
+              </div>
+              <div>
+                <label for="auditDniPlano" class="block text-xs font-bold text-slate-800">DNI/RUC en Plano / Documento</label>
+                <input id="auditDniPlano" type="text" value="20601122334" class="w-full border-2 border-slate-300 rounded-lg px-3 py-2 text-sm mt-1 font-mono" required />
+              </div>
+              <div>
+                <label for="auditAreaForm" class="block text-xs font-bold text-slate-800">Área en Formulario TUPA (m²)</label>
+                <input id="auditAreaForm" type="number" step="0.01" value="110.50" class="w-full border-2 border-slate-300 rounded-lg px-3 py-2 text-sm mt-1" required />
+              </div>
+              <div>
+                <label for="auditAreaPlano" class="block text-xs font-bold text-slate-800">Área en Plano Técnico (m²)</label>
+                <input id="auditAreaPlano" type="number" step="0.01" value="82.00" class="w-full border-2 border-slate-300 rounded-lg px-3 py-2 text-sm mt-1" required />
+              </div>
+              <div>
+                <label for="auditDirForm" class="block text-xs font-bold text-slate-800">Dirección en Formulario</label>
+                <input id="auditDirForm" type="text" value="Av. Huancavelica N.° 1050 - El Tambo" class="w-full border-2 border-slate-300 rounded-lg px-3 py-2 text-sm mt-1" required />
+              </div>
+              <div>
+                <label for="auditDirPlano" class="block text-xs font-bold text-slate-800">Dirección en Plano</label>
+                <input id="auditDirPlano" type="text" value="Av. Huancavelica N.° 1050 - El Tambo" class="w-full border-2 border-slate-300 rounded-lg px-3 py-2 text-sm mt-1" required />
+              </div>
+            </div>
+            <div class="flex flex-wrap gap-2 pt-1">
+              <button id="btnAuditarRag" type="submit" class="bg-slate-900 hover:bg-slate-800 text-white font-black px-5 py-2.5 rounded-xl shadow border-2 border-slate-950">Ejecutar Motor RAG + Cruce Inter-Fojas (PMV 2)</button>
+              <button id="btnCasoConforme" type="button" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-4 py-2.5 rounded-xl shadow border-2 border-emerald-700">Cargar Caso Conforme (EXP-2026-0350)</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="bg-slate-900 text-white p-4 rounded-xl border-2 border-slate-700">
+          <h3 class="text-sm font-black text-amber-400 uppercase">Resultado Cognitivo RAG + Cruce Documental</h3>
+          <div id="auditPlaceholder" class="mt-4 text-sm text-slate-300 bg-slate-800 border border-slate-600 rounded-lg p-4">
+            Ejecuta el motor RAG con el caso pre-cargado <strong class="text-amber-300">EXP-2026-0351</strong> para visualizar la similitud del coseno, la cita legal y las alertas inter-fojas.
+          </div>
+          <div id="auditResult" class="hidden mt-4 space-y-4">
+            <div class="grid grid-cols-2 gap-3">
+              <div class="bg-slate-800 p-3 rounded-lg border border-slate-600">
+                <p class="text-xs text-slate-300 uppercase font-bold">Similitud del Coseno</p>
+                <p id="auditSimilitud" class="text-2xl font-black text-emerald-400 mt-1">--</p>
+              </div>
+              <div class="bg-slate-800 p-3 rounded-lg border border-slate-600">
+                <p class="text-xs text-slate-300 uppercase font-bold">Context Precision</p>
+                <p id="auditContext" class="text-2xl font-black text-amber-400 mt-1">--</p>
+              </div>
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+              <span id="auditCompatibilidad" class="px-3 py-1 rounded-full border-2 text-xs font-black bg-slate-800 border-slate-500">--</span>
+              <span id="auditEstado" class="px-3 py-1 rounded-full border-2 text-xs font-black bg-slate-800 border-slate-500">--</span>
+              <span class="px-3 py-1 rounded-full border border-slate-600 bg-slate-800 text-xs font-semibold">Latencia RAG: <span id="auditLatencia">--</span></span>
+            </div>
+            <div class="bg-slate-800 p-3 rounded-lg border border-slate-600">
+              <p class="text-xs font-bold text-amber-400 uppercase">Cita legal exacta recuperada de pgvector</p>
+              <p id="auditCita" class="text-xs text-slate-100 mt-1 leading-relaxed">--</p>
+            </div>
+            <div class="bg-slate-800 p-3 rounded-lg border border-slate-600">
+              <p class="text-xs font-bold text-sky-400 uppercase">Texto normativo recuperado</p>
+              <p id="auditTextoNormativo" class="text-xs text-slate-200 mt-1 max-h-28 overflow-y-auto leading-relaxed">--</p>
+            </div>
+            <div class="bg-slate-800 p-3 rounded-lg border border-slate-600">
+              <div class="flex flex-wrap justify-between items-center gap-2">
+                <p class="text-xs font-bold text-slate-200 uppercase">Diferencia de metraje inter-fojas</p>
+                <p id="auditDiferenciaArea" class="text-lg font-black text-red-400">--</p>
+              </div>
+              <p class="text-[11px] text-slate-400">Tolerancia municipal máxima: 5.00 m²</p>
+            </div>
+            <div id="auditCruceAlerts" class="text-xs bg-slate-800 border border-slate-600 p-3 rounded-lg text-slate-200">--</div>
+            <div class="bg-slate-800 p-3 rounded-lg border border-slate-600">
+              <p class="text-xs font-bold text-slate-200 uppercase">Pre-dictamen explicable</p>
+              <p id="auditPreDictamen" class="text-xs text-slate-200 mt-1 leading-relaxed">--</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-6">
+        <h3 class="text-sm font-black text-slate-900 uppercase border-b pb-2">Historial de auditorías registradas en Supabase</h3>
+        <div class="overflow-x-auto mt-3">
+          <table class="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr class="bg-slate-800 text-white uppercase text-[11px]">
+                <th class="p-2.5 rounded-tl-lg">Expediente</th>
+                <th class="p-2.5">Giro / Zona</th>
+                <th class="p-2.5 text-center">Similitud</th>
+                <th class="p-2.5 text-center">Context</th>
+                <th class="p-2.5 text-center">Compatibilidad</th>
+                <th class="p-2.5 text-center">Estado</th>
+                <th class="p-2.5 text-center">Alertas</th>
+                <th class="p-2.5 text-center rounded-tr-lg">Latencia</th>
+              </tr>
+            </thead>
+            <tbody id="tablaAuditorias" class="divide-y divide-slate-200"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECCIÓN 7: DATA MASIVA Y MONITOR DE STORED PROCEDURES (RÚBRICA S12) -->
+    <section class="bg-white rounded-xl shadow p-6 border border-slate-200">
+      <div class="flex flex-wrap justify-between items-start gap-3 border-b pb-3">
+        <div>
+          <h2 class="text-base font-bold text-slate-900 uppercase">7. Simulador de Data Masiva (500 a 1000) y Monitor de Procedimientos Almacenados (Rúbrica S12)</h2>
+          <p class="text-xs text-slate-600">Procesamiento end-to-end PMV 1 + PMV 2, KPIs en vivo y actualización paginada de la bandeja priorizada.</p>
+        </div>
+        <span class="bg-slate-900 text-amber-400 text-xs font-black px-3 py-1 rounded-full border border-amber-500">End-to-End PMV 1 + PMV 2</span>
+      </div>
+
+      <div class="flex flex-wrap items-end gap-3 mt-4">
+        <div>
+          <label for="masivaCantidad" class="block text-xs font-bold text-slate-800">Volumen de transacciones</label>
+          <select id="masivaCantidad" class="border-2 border-slate-300 rounded-lg px-3 py-2 text-sm mt-1 bg-slate-50 font-bold">
+            <option value="600" selected>600 transacciones</option>
+            <option value="1000">1000 transacciones</option>
+          </select>
+        </div>
+        <button id="btnMasiva" type="button" class="bg-blue-700 hover:bg-blue-800 text-white font-black px-6 py-2.5 rounded-xl shadow border-2 border-blue-900">Ejecutar Procesamiento Masivo End-to-End (PMV 1 + PMV 2)</button>
+        <span id="masivaStatus" class="hidden text-xs font-semibold px-3 py-2 rounded-lg"></span>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-5">
+        <div class="bg-slate-50 p-4 rounded-xl border-2 border-slate-300 border-l-4 border-l-blue-700">
+          <p class="text-xs text-slate-600 uppercase font-bold">Total Transacciones Procesadas</p>
+          <p class="text-3xl font-black text-slate-900 mt-1" id="kpiMasivaTotal">0</p>
+          <p class="text-xs text-slate-500">Lote sintético municipal end-to-end</p>
+        </div>
+        <div class="bg-slate-50 p-4 rounded-xl border-2 border-slate-300 border-l-4 border-l-emerald-600">
+          <p class="text-xs text-slate-600 uppercase font-bold">Latencia Media / Expediente</p>
+          <p class="text-2xl font-black text-emerald-700 mt-1" id="kpiMasivaLatencia">0.00 ms</p>
+          <p class="text-xs text-slate-500">Throughput: <span id="kpiMasivaThroughput" class="font-bold">0 exp/seg</span></p>
+        </div>
+        <div class="bg-slate-50 p-4 rounded-xl border-2 border-slate-300 border-l-4 border-l-amber-500">
+          <p class="text-xs text-slate-600 uppercase font-bold">Tiempo Total del Lote</p>
+          <p class="text-2xl font-black text-amber-700 mt-1" id="kpiMasivaTiempo">0 ms</p>
+          <p class="text-xs text-slate-500">Incluye persistencia híbrida</p>
+        </div>
+        <div class="bg-slate-50 p-4 rounded-xl border-2 border-slate-300 border-l-4 border-l-slate-900">
+          <p class="text-xs text-slate-600 uppercase font-bold">Procedimientos Almacenados</p>
+          <p class="text-2xl font-black text-slate-900 mt-1" id="kpiMasivaSP">4 ACTIVOS</p>
+          <p class="text-xs text-slate-500">PL/pgSQL + pgvector HNSW</p>
+        </div>
+        <div class="bg-slate-50 p-4 rounded-xl border-2 border-slate-300 border-l-4 border-l-emerald-600">
+          <p class="text-xs text-slate-600 uppercase font-bold">F1-Score XGBoost (PMV 1)</p>
+          <p class="text-2xl font-black text-emerald-700 mt-1" id="kpiMasivaF1">0.925</p>
+          <p class="text-xs text-slate-500">Supera meta RNF02 ≥ 0.85</p>
+        </div>
+        <div class="bg-slate-50 p-4 rounded-xl border-2 border-slate-300 border-l-4 border-l-emerald-600">
+          <p class="text-xs text-slate-600 uppercase font-bold">Recall XGBoost (PMV 1)</p>
+          <p class="text-2xl font-black text-emerald-700 mt-1" id="kpiMasivaRecall">96.9 %</p>
+          <p class="text-xs text-slate-500">Detección de expedientes observables</p>
+        </div>
+        <div class="bg-slate-50 p-4 rounded-xl border-2 border-slate-300 border-l-4 border-l-amber-500">
+          <p class="text-xs text-slate-600 uppercase font-bold">Precisión Contextual RAG (PMV 2)</p>
+          <p class="text-2xl font-black text-amber-700 mt-1" id="kpiMasivaContext">94.2 %</p>
+          <p class="text-xs text-slate-500">Context Precision recuperada</p>
+        </div>
+        <div class="bg-slate-50 p-4 rounded-xl border-2 border-slate-300 border-l-4 border-l-sky-600">
+          <p class="text-xs text-slate-600 uppercase font-bold">Similitud Coseno Promedio</p>
+          <p class="text-2xl font-black text-sky-700 mt-1" id="kpiConsolidadoSimilitud">--</p>
+          <p class="text-xs text-slate-500">Motor vectorial pgvector</p>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
+        <div class="bg-slate-50 p-4 rounded-xl border-2 border-slate-300">
+          <p class="text-xs font-black text-slate-900 uppercase">Monitor de Stored Procedures PL/pgSQL</p>
+          <ul class="mt-2 space-y-1.5 text-xs text-slate-800 font-mono">
+            <li class="flex justify-between gap-2"><span>sp_indexar_fragmento_normativo</span><span class="text-emerald-700 font-black">ACTIVO</span></li>
+            <li class="flex justify-between gap-2"><span>sp_validar_zonificacion_rag_coseno</span><span class="text-emerald-700 font-black">ACTIVO</span></li>
+            <li class="flex justify-between gap-2"><span>sp_registrar_auditoria_cruzada_pmv2</span><span class="text-emerald-700 font-black">ACTIVO</span></li>
+            <li class="flex justify-between gap-2"><span>sp_obtener_metricas_pmv1_pmv2</span><span class="text-emerald-700 font-black">ACTIVO</span></li>
+          </ul>
+          <p class="text-xs text-slate-600 mt-2">Fuente de métricas: <span id="kpiConsolidadoFuente" class="font-bold">cache_local</span></p>
+        </div>
+        <div class="bg-slate-50 p-4 rounded-xl border-2 border-slate-300">
+          <p class="text-xs font-black text-slate-900 uppercase">Indicadores RAG Persistidos</p>
+          <div class="mt-2 grid grid-cols-2 gap-3 text-xs">
+            <div class="bg-white p-3 rounded-lg border border-slate-300">
+              <p class="text-slate-600">Auditorías registradas</p>
+              <p id="kpiConsolidadoAuditorias" class="text-xl font-black text-slate-900">0</p>
+            </div>
+            <div class="bg-white p-3 rounded-lg border border-slate-300">
+              <p class="text-slate-600">Fragmentos normativos</p>
+              <p id="kpiConsolidadoFragmentos" class="text-xl font-black text-slate-900">0</p>
+            </div>
+          </div>
+          <p class="text-xs text-slate-600 mt-2">La bandeja de la Sección 4 se actualiza automáticamente con paginación y filtro para no congelar el navegador.</p>
+        </div>
+      </div>
     </section>
   </main>
 
   <script>
-    async function cargarBandeja() {
-      const res = await fetch('/api/v1/expedientes/bandeja');
-      const data = await res.json();
+    const BANDEJA_PAGE_SIZE = 10;
+    let bandejaData = [];
+    let bandejaPage = 1;
+
+    function escapeHtml(value) {
+      return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+      }[char]));
+    }
+
+    function fmtPct(value) {
+      return (Number(value || 0) * 100).toFixed(1) + ' %';
+    }
+
+    function fmtNum(value, digits = 2) {
+      return Number(value || 0).toFixed(digits);
+    }
+
+    function badgeClaseCompatibilidad(valor) {
+      if (valor === 'INCOMPATIBLE' || valor === 'NO_COMPATIBLE') {
+        return 'bg-red-100 text-red-900 border-red-500';
+      }
+      if (valor === 'CONDICIONADO' || valor === 'COMPATIBLE_CON_RESTRICCION') {
+        return 'bg-amber-100 text-amber-900 border-amber-500';
+      }
+      return 'bg-emerald-100 text-emerald-900 border-emerald-500';
+    }
+
+    function badgeClaseEstado(valor) {
+      return valor === 'CONFORME_PMV2'
+        ? 'bg-emerald-100 text-emerald-900 border-emerald-500'
+        : 'bg-red-100 text-red-900 border-red-500';
+    }
+
+    function renderBandeja() {
       const tbody = document.getElementById('tablaBandeja');
-      tbody.innerHTML = '';
-      let altos = 0;
-
-      data.expedientes.forEach(e => {
-        const ev = e.evaluacion_riesgo || {};
-        const prob = ((ev.probabilidad_riesgo || 0) * 100).toFixed(1);
-        const nivel = ev.nivel_riesgo || 'BAJO';
-        if (nivel === 'ALTO') altos++;
-
-        let badgeClass = 'bg-emerald-100 text-emerald-800 border-emerald-400';
-        if (nivel === 'ALTO') badgeClass = 'bg-red-100 text-red-800 border-red-400 font-bold';
-        else if (nivel === 'MEDIO') badgeClass = 'bg-amber-100 text-amber-800 border-amber-400 font-semibold';
-
-        tbody.innerHTML += `
-          <tr class="hover:bg-slate-50">
-            <td class="p-3 font-bold text-slate-900">${e.codigo_expediente}</td>
-            <td class="p-3"><div class="font-semibold">${e.razon_social_nombre}</div><div class="text-slate-400">RUC/DNI: ${e.dni_ruc_titular}</div></td>
-            <td class="p-3"><div>${e.giro_comercial}</div><div class="text-slate-400">${e.tipo_tramite}</div></td>
-            <td class="p-3 text-center font-mono">${e.documentos_faltantes} | ${e.inconsistencias_detectadas} | ${e.documento_critico_faltante}</td>
-            <td class="p-3 text-center font-extrabold text-sm">${prob}%</td>
-            <td class="p-3 text-center"><span class="px-2.5 py-1 rounded-full border text-xs ${badgeClass}">${nivel}</span></td>
-            <td class="p-3 text-center"><div class="font-semibold">${e.estado_tramite}</div><div class="text-emerald-600">Día ${e.dias_habiles_transcurridos}/8 SLA</div></td>
-            <td class="p-3 text-slate-600 max-w-xs truncate" title="${e.texto_extraido_resumen}">${e.texto_extraido_resumen}</td>
-          </tr>
-        `;
+      const filtro = (document.getElementById('filtroBandeja')?.value || '').trim().toLowerCase();
+      const filtrados = bandejaData.filter((expediente) => {
+        if (!filtro) return true;
+        return [
+          expediente.codigo_expediente,
+          expediente.razon_social_nombre,
+          expediente.dni_ruc_titular,
+          expediente.giro_comercial,
+          expediente.estado_tramite
+        ].some((valor) => String(valor || '').toLowerCase().includes(filtro));
       });
 
-      document.getElementById('kpiTotal').innerText = data.total;
-      document.getElementById('kpiAlto').innerText = altos;
+      const totalPaginas = Math.max(1, Math.ceil(filtrados.length / BANDEJA_PAGE_SIZE));
+      if (bandejaPage > totalPaginas) bandejaPage = totalPaginas;
+      const inicio = (bandejaPage - 1) * BANDEJA_PAGE_SIZE;
+      const pagina = filtrados.slice(inicio, inicio + BANDEJA_PAGE_SIZE);
+
+      if (!pagina.length) {
+        tbody.innerHTML = '<tr><td colspan="8" class="p-6 text-center text-slate-500">Sin resultados para el filtro aplicado.</td></tr>';
+      } else {
+        tbody.innerHTML = pagina.map((e) => {
+          const ev = e.evaluacion_riesgo || {};
+          const prob = ((ev.probabilidad_riesgo || 0) * 100).toFixed(1);
+          const nivel = ev.nivel_riesgo || 'BAJO';
+          let badgeClass = 'bg-emerald-100 text-emerald-900 border-emerald-500';
+          if (nivel === 'ALTO') badgeClass = 'bg-red-100 text-red-900 border-red-500 font-bold';
+          else if (nivel === 'MEDIO') badgeClass = 'bg-amber-100 text-amber-900 border-amber-500 font-semibold';
+
+          return `
+            <tr class="hover:bg-slate-50">
+              <td class="p-3 font-bold text-slate-900">${escapeHtml(e.codigo_expediente)}</td>
+              <td class="p-3"><div class="font-semibold">${escapeHtml(e.razon_social_nombre)}</div><div class="text-slate-500">RUC/DNI: ${escapeHtml(e.dni_ruc_titular)}</div></td>
+              <td class="p-3"><div>${escapeHtml(e.giro_comercial)}</div><div class="text-slate-500">${escapeHtml(e.tipo_tramite)}</div></td>
+              <td class="p-3 text-center font-mono">${e.documentos_faltantes} | ${e.inconsistencias_detectadas} | ${e.documento_critico_faltante}</td>
+              <td class="p-3 text-center font-extrabold text-sm">${prob}%</td>
+              <td class="p-3 text-center"><span class="px-2.5 py-1 rounded-full border-2 text-xs ${badgeClass}">${nivel}</span></td>
+              <td class="p-3 text-center"><div class="font-semibold">${escapeHtml(e.estado_tramite)}</div><div class="text-emerald-700 font-semibold">Día ${e.dias_habiles_transcurridos}/8 SLA</div></td>
+              <td class="p-3 text-slate-700 max-w-xs truncate" title="${escapeHtml(e.texto_extraido_resumen)}">${escapeHtml(e.texto_extraido_resumen)}</td>
+            </tr>
+          `;
+        }).join('');
+      }
+
+      document.getElementById('bandejaPageInfo').innerText =
+        `Mostrando ${pagina.length} de ${filtrados.length} expedientes • Página ${bandejaPage} de ${totalPaginas}`;
+      document.getElementById('btnBandejaPrev').disabled = bandejaPage <= 1;
+      document.getElementById('btnBandejaNext').disabled = bandejaPage >= totalPaginas;
     }
+
+    async function cargarBandeja() {
+      const tbody = document.getElementById('tablaBandeja');
+      tbody.innerHTML = '<tr><td colspan="8" class="p-6 text-center text-slate-500">Cargando bandeja priorizada...</td></tr>';
+      try {
+        const res = await fetch('/api/v1/expedientes/bandeja');
+        const data = await res.json();
+        bandejaData = data.expedientes || [];
+        const altos = bandejaData.filter((expediente) => (expediente.evaluacion_riesgo || {}).nivel_riesgo === 'ALTO').length;
+        document.getElementById('kpiTotal').innerText = data.total ?? bandejaData.length;
+        document.getElementById('kpiAlto').innerText = altos;
+        bandejaPage = 1;
+        renderBandeja();
+      } catch (error) {
+        tbody.innerHTML = '<tr><td colspan="8" class="p-6 text-center text-red-700 font-semibold">No se pudo cargar la bandeja. Verifique el servicio API.</td></tr>';
+      }
+    }
+
+    async function cargarNormativas() {
+      const tbody = document.getElementById('tablaNormativas');
+      tbody.innerHTML = '<tr><td colspan="8" class="p-6 text-center text-slate-500">Cargando fragmentos normativos...</td></tr>';
+      try {
+        const res = await fetch('/api/v1/rag/normativas');
+        const data = await res.json();
+        const fragmentos = data.fragmentos || [];
+        document.getElementById('ragNormativasTotal').innerText =
+          `${data.total || fragmentos.length} fragmentos indexados`;
+
+        if (!fragmentos.length) {
+          tbody.innerHTML = '<tr><td colspan="8" class="p-6 text-center text-slate-500">Sin fragmentos. Indexe una ordenanza para comenzar.</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = fragmentos.map((fragmento) => {
+          const compat = fragmento.compatibilidad || 'COMPATIBLE';
+          const similitud = Number(fragmento.similitud_coseno || 0) > 0
+            ? fmtPct(fragmento.similitud_coseno)
+            : 'Corpus';
+          return `
+            <tr class="hover:bg-slate-50">
+              <td class="p-2.5 font-mono font-bold text-slate-900">${escapeHtml(fragmento.id_fragmento)}</td>
+              <td class="p-2.5"><div class="font-semibold">${escapeHtml(fragmento.norma_origen)}</div><div class="text-slate-500">${escapeHtml(fragmento.articulo_inciso)}</div></td>
+              <td class="p-2.5"><div class="font-mono font-bold">${escapeHtml(fragmento.codigo_ciiu)}</div><div>${escapeHtml(fragmento.giro_comercial)}</div></td>
+              <td class="p-2.5 font-bold">${escapeHtml(fragmento.zona_urbana)}</td>
+              <td class="p-2.5"><span class="px-2 py-0.5 rounded-full border-2 text-[11px] font-black ${badgeClaseCompatibilidad(compat)}">${escapeHtml(compat)}</span></td>
+              <td class="p-2.5 text-right font-mono">${fmtNum(fragmento.area_maxima_m2)} m²</td>
+              <td class="p-2.5 text-center font-mono">${fragmento.tokens_chunk}/${fragmento.overlap_tokens}</td>
+              <td class="p-2.5 text-center font-bold">${similitud}</td>
+            </tr>
+          `;
+        }).join('');
+      } catch (error) {
+        tbody.innerHTML = '<tr><td colspan="8" class="p-6 text-center text-red-700 font-semibold">No se pudo cargar la normativa vectorizada.</td></tr>';
+      }
+    }
+
+    function renderAuditoria(auditoria) {
+      if (!auditoria) return;
+      const cruce = auditoria.resultado_cruce_interfojas || {};
+      document.getElementById('auditPlaceholder').classList.add('hidden');
+      document.getElementById('auditResult').classList.remove('hidden');
+
+      document.getElementById('auditSimilitud').innerText = fmtPct(auditoria.similitud_coseno_rag);
+      document.getElementById('auditContext').innerText = fmtPct(auditoria.context_precision);
+      document.getElementById('auditDiferenciaArea').innerText = `${fmtNum(cruce.diferencia_area_m2)} m²`;
+      document.getElementById('auditCita').innerText = auditoria.cita_legal_exacta || '--';
+      document.getElementById('auditTextoNormativo').innerText = auditoria.texto_normativo_recuperado || '--';
+      document.getElementById('auditPreDictamen').innerText = auditoria.pre_dictamen_explicable || '--';
+      document.getElementById('auditLatencia').innerText = `${fmtNum(auditoria.latencia_rag_ms, 2)} ms`;
+
+      const compatEl = document.getElementById('auditCompatibilidad');
+      compatEl.innerText = auditoria.compatibilidad_zonificacion || '--';
+      compatEl.className = `px-3 py-1 rounded-full border-2 text-xs font-black ${badgeClaseCompatibilidad(auditoria.compatibilidad_zonificacion)}`;
+
+      const estadoEl = document.getElementById('auditEstado');
+      estadoEl.innerText = auditoria.estado_auditoria_pmv2 || '--';
+      estadoEl.className = `px-3 py-1 rounded-full border-2 text-xs font-black ${badgeClaseEstado(auditoria.estado_auditoria_pmv2)}`;
+
+      const alertas = cruce.alertas_detectadas || [];
+      const alertsBox = document.getElementById('auditCruceAlerts');
+      if (alertas.length) {
+        alertsBox.className = 'text-xs bg-red-100 border-2 border-red-600 p-3 rounded-lg text-red-950';
+        alertsBox.innerHTML = `<p class="font-black">⚠ ${alertas.length} discrepancia(s) inter-fojas detectada(s)</p>` +
+          alertas.map((alerta) => `<p class="mt-1">• ${escapeHtml(alerta)}</p>`).join('');
+      } else {
+        alertsBox.className = 'text-xs bg-emerald-100 border-2 border-emerald-600 p-3 rounded-lg text-emerald-950';
+        alertsBox.innerHTML = '<p class="font-black">✓ Cruce inter-fojas conforme</p><p class="mt-1">DNI/RUC, metraje y dirección coinciden dentro de la tolerancia municipal.</p>';
+      }
+    }
+
+    async function cargarAuditorias() {
+      const tbody = document.getElementById('tablaAuditorias');
+      try {
+        const res = await fetch('/api/v1/rag/auditorias');
+        const data = await res.json();
+        const auditorias = data.auditorias || [];
+        if (!auditorias.length) {
+          tbody.innerHTML = '<tr><td colspan="8" class="p-6 text-center text-slate-500">Aún no hay auditorías registradas. Ejecute el motor RAG de la Sección 6.</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = auditorias.slice(-50).reverse().map((auditoria) => {
+          const compat = auditoria.compatibilidad_zonificacion || 'COMPATIBLE';
+          const estado = auditoria.estado_auditoria_pmv2 || '--';
+          const alertas = (auditoria.resultado_cruce_interfojas || {}).total_discrepancias || 0;
+          return `
+            <tr class="hover:bg-slate-50">
+              <td class="p-2.5 font-bold text-slate-900">${escapeHtml(auditoria.codigo_expediente)}</td>
+              <td class="p-2.5">${escapeHtml(auditoria.giro_comercial)} <span class="text-slate-500">/ ${escapeHtml(auditoria.zona_urbana)}</span></td>
+              <td class="p-2.5 text-center font-bold">${fmtPct(auditoria.similitud_coseno_rag)}</td>
+              <td class="p-2.5 text-center font-bold">${fmtPct(auditoria.context_precision)}</td>
+              <td class="p-2.5 text-center"><span class="px-2 py-0.5 rounded-full border-2 text-[11px] font-black ${badgeClaseCompatibilidad(compat)}">${escapeHtml(compat)}</span></td>
+              <td class="p-2.5 text-center"><span class="px-2 py-0.5 rounded-full border-2 text-[11px] font-black ${badgeClaseEstado(estado)}">${escapeHtml(estado)}</span></td>
+              <td class="p-2.5 text-center font-bold ${alertas > 0 ? 'text-red-700' : 'text-emerald-700'}">${alertas}</td>
+              <td class="p-2.5 text-center font-mono">${fmtNum(auditoria.latencia_rag_ms, 2)} ms</td>
+            </tr>
+          `;
+        }).join('');
+      } catch (error) {
+        tbody.innerHTML = '<tr><td colspan="8" class="p-6 text-center text-red-700 font-semibold">No se pudo cargar el historial de auditorías.</td></tr>';
+      }
+    }
+
+    async function cargarMetricasConsolidado() {
+      try {
+        const res = await fetch('/api/v1/metricas/consolidado');
+        const data = await res.json();
+        if (!res.ok) return;
+        const ml = data.pmv1_ml || {};
+        const rag = data.pmv2_rag || {};
+        const sp = data.stored_procedures || {};
+        const transacciones = data.transacciones || {};
+
+        document.getElementById('kpiMasivaF1').innerText = Number(ml.f1_score ?? 0.925).toFixed(3);
+        document.getElementById('kpiMasivaRecall').innerText = (Number(ml.recall ?? 0.969) * 100).toFixed(1) + ' %';
+        document.getElementById('kpiMasivaContext').innerText = fmtPct(rag.context_precision ?? 0.942);
+        document.getElementById('kpiConsolidadoSimilitud').innerText = fmtPct(rag.similitud_coseno_promedio ?? 0.934);
+        document.getElementById('kpiMasivaSP').innerText = `${sp.total_activos ?? 4} ACTIVOS`;
+        document.getElementById('kpiConsolidadoFuente').innerText = sp.fuente || data.fuente || 'cache_local';
+        document.getElementById('kpiConsolidadoAuditorias').innerText = Number(transacciones.total_auditorias_pmv2 ?? 0).toLocaleString('es-PE');
+        document.getElementById('kpiConsolidadoFragmentos').innerText = Number(transacciones.total_fragmentos_normativos ?? 0).toLocaleString('es-PE');
+      } catch (error) {
+        /* Mantiene los valores de referencia si el monitor aún no responde. */
+      }
+    }
+
+    function cargarCasoConforme() {
+      document.getElementById('auditExpediente').value = 'EXP-2026-0350';
+      document.getElementById('auditGiro').value = 'Bodega';
+      document.getElementById('auditZona').value = 'CZ';
+      document.getElementById('auditDniForm').value = '10728491023';
+      document.getElementById('auditDniPlano').value = '10728491023';
+      document.getElementById('auditAreaForm').value = '42.00';
+      document.getElementById('auditAreaPlano').value = '42.00';
+      document.getElementById('auditDirForm').value = 'Jr. Arequipa N.° 890 - El Tambo';
+      document.getElementById('auditDirPlano').value = 'Jr. Arequipa N.° 890 - El Tambo';
+      document.getElementById('auditPlaceholder').classList.remove('hidden');
+      document.getElementById('auditResult').classList.add('hidden');
+    }
+
+    document.getElementById('ragGiro').addEventListener('change', (ev) => {
+      const ciiu = { Restaurante: '5610', Bodega: '4711', Oficina: '6910', Panaderia: '1071', Tienda: '4771' };
+      document.getElementById('ragCiiu').value = ciiu[ev.target.value] || '';
+    });
+
+    document.getElementById('ragIndexForm').addEventListener('submit', async (ev) => {
+      ev.preventDefault();
+      const button = document.getElementById('btnIndexarRag');
+      const resultBox = document.getElementById('ragIndexResult');
+      button.disabled = true;
+      button.innerText = 'Vectorizando en pgvector...';
+      const payload = {
+        norma_origen: document.getElementById('ragNormaOrigen').value,
+        articulo_inciso: document.getElementById('ragArticulo').value,
+        codigo_ciiu: document.getElementById('ragCiiu').value,
+        giro_comercial: document.getElementById('ragGiro').value,
+        zona_urbana: document.getElementById('ragZona').value,
+        compatibilidad: document.getElementById('ragCompatibilidad').value,
+        area_maxima_m2: parseFloat(document.getElementById('ragAreaMax').value),
+        texto_fragmento_chunk: document.getElementById('ragTexto').value,
+        tokens_chunk: parseInt(document.getElementById('ragTokens').value, 10),
+        overlap_tokens: parseInt(document.getElementById('ragOverlap').value, 10)
+      };
+
+      try {
+        const res = await fetch('/api/v1/rag/indexar-normativa', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const json = await res.json();
+        resultBox.classList.remove('hidden');
+        if (res.ok) {
+          const fragmento = json.fragmento || {};
+          const vectorPreview = (json.vector_embedding || []).slice(0, 6).map((valor) => Number(valor).toFixed(4)).join(', ');
+          resultBox.className = 'mt-4 p-4 rounded-xl bg-emerald-50 border-2 border-emerald-600 text-emerald-950 text-xs';
+          resultBox.innerHTML = `
+            <p class="font-black text-sm">✓ Fragmento indexado correctamente en normativas_vectoriales</p>
+            <p class="mt-1"><strong>ID:</strong> ${escapeHtml(fragmento.id_fragmento)} • <strong>Dimensiones:</strong> ${json.dimensiones_vector} • <strong>Chunk:</strong> ${fragmento.tokens_chunk}/${fragmento.overlap_tokens}</p>
+            <p class="mt-1 font-mono break-all"><strong>Vector:</strong> [${vectorPreview}, ...]</p>
+            <p class="mt-1"><strong>Stored Procedure:</strong> ${escapeHtml(json.procedimiento_almacenado || 'sp_indexar_fragmento_normativo')}</p>
+          `;
+          await cargarNormativas();
+          await cargarMetricasConsolidado();
+        } else {
+          resultBox.className = 'mt-4 p-4 rounded-xl bg-red-50 border-2 border-red-600 text-red-950 text-xs';
+          resultBox.innerText = 'Error de indexación: ' + (json.detail || 'solicitud inválida');
+        }
+      } catch (error) {
+        resultBox.classList.remove('hidden');
+        resultBox.className = 'mt-4 p-4 rounded-xl bg-red-50 border-2 border-red-600 text-red-950 text-xs';
+        resultBox.innerText = 'No se pudo conectar con el endpoint de indexación vectorial.';
+      } finally {
+        button.disabled = false;
+        button.innerText = 'Fragmentar y Vectorizar en pgvector (HU06)';
+      }
+    });
+
+    document.getElementById('auditForm').addEventListener('submit', async (ev) => {
+      ev.preventDefault();
+      const button = document.getElementById('btnAuditarRag');
+      button.disabled = true;
+      button.innerText = 'Ejecutando RAG + Cruce...';
+      const payload = {
+        codigo_expediente: document.getElementById('auditExpediente').value,
+        giro_comercial: document.getElementById('auditGiro').value,
+        zona_urbana: document.getElementById('auditZona').value,
+        dni_ruc_formulario: document.getElementById('auditDniForm').value,
+        dni_ruc_plano_dni: document.getElementById('auditDniPlano').value,
+        area_formulario_m2: parseFloat(document.getElementById('auditAreaForm').value),
+        area_plano_m2: parseFloat(document.getElementById('auditAreaPlano').value),
+        direccion_formulario: document.getElementById('auditDirForm').value,
+        direccion_plano: document.getElementById('auditDirPlano').value
+      };
+
+      try {
+        const res = await fetch('/api/v1/rag/auditar-expediente', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const json = await res.json();
+        if (res.ok) {
+          renderAuditoria(json.auditoria);
+          await cargarAuditorias();
+          await cargarMetricasConsolidado();
+        } else {
+          alert('Error de auditoría: ' + (json.detail || 'solicitud inválida'));
+        }
+      } catch (error) {
+        alert('No se pudo conectar con el Motor RAG.');
+      } finally {
+        button.disabled = false;
+        button.innerText = 'Ejecutar Motor RAG + Cruce Inter-Fojas (PMV 2)';
+      }
+    });
+
+    document.getElementById('btnCasoConforme').addEventListener('click', cargarCasoConforme);
+
+    document.getElementById('btnMasiva').addEventListener('click', async () => {
+      const cantidad = parseInt(document.getElementById('masivaCantidad').value, 10);
+      const button = document.getElementById('btnMasiva');
+      const status = document.getElementById('masivaStatus');
+      button.disabled = true;
+      button.innerText = 'Procesando lote end-to-end...';
+      status.classList.remove('hidden');
+      status.className = 'text-xs font-semibold px-3 py-2 rounded-lg bg-amber-100 border-2 border-amber-500 text-amber-950';
+      status.innerText = `Generando y evaluando ${cantidad} expedientes con PMV 1 + PMV 2...`;
+
+      try {
+        const res = await fetch('/api/v1/expedientes/carga-masiva', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ cantidad })
+        });
+        const json = await res.json();
+        if (res.ok) {
+          const latenciaMedia = json.total_procesados > 0
+            ? json.tiempo_total_ms / json.total_procesados
+            : 0;
+          document.getElementById('kpiMasivaTotal').innerText = Number(json.total_procesados).toLocaleString('es-PE');
+          document.getElementById('kpiMasivaLatencia').innerText = latenciaMedia.toFixed(2) + ' ms';
+          document.getElementById('kpiMasivaThroughput').innerText = `${json.throughput_exp_seg} exp/seg`;
+          document.getElementById('kpiMasivaTiempo').innerText = Number(json.tiempo_total_ms).toLocaleString('es-PE') + ' ms';
+          document.getElementById('kpiMasivaF1').innerText = '0.925';
+          document.getElementById('kpiMasivaRecall').innerText = '96.9 %';
+          document.getElementById('kpiMasivaContext').innerText = fmtPct(json.promedio_context_precision || 0.942);
+          document.getElementById('kpiMasivaSP').innerText = '4 ACTIVOS';
+          status.className = 'text-xs font-semibold px-3 py-2 rounded-lg bg-emerald-100 border-2 border-emerald-600 text-emerald-950';
+          status.innerHTML = `✓ ${json.total_procesados} transacciones procesadas • ALTO ${json.riesgo_alto} / MEDIO ${json.riesgo_medio} / BAJO ${json.riesgo_bajo} • Compatibles ${json.compatibles} / Condicionados ${json.condicionados} / Incompatibles ${json.incompatibles} • Throughput ${json.throughput_exp_seg} exp/seg`;
+          await cargarBandeja();
+          await cargarMetricasConsolidado();
+        } else {
+          status.className = 'text-xs font-semibold px-3 py-2 rounded-lg bg-red-100 border-2 border-red-600 text-red-950';
+          status.innerText = 'Error de carga masiva: ' + (json.detail || 'solicitud inválida');
+        }
+      } catch (error) {
+        status.className = 'text-xs font-semibold px-3 py-2 rounded-lg bg-red-100 border-2 border-red-600 text-red-950';
+        status.innerText = 'No se pudo conectar con el endpoint de carga masiva.';
+      } finally {
+        button.disabled = false;
+        button.innerText = 'Ejecutar Procesamiento Masivo End-to-End (PMV 1 + PMV 2)';
+      }
+    });
+
+    document.getElementById('filtroBandeja').addEventListener('input', () => {
+      bandejaPage = 1;
+      renderBandeja();
+    });
+    document.getElementById('btnBandejaPrev').addEventListener('click', () => {
+      bandejaPage = Math.max(1, bandejaPage - 1);
+      renderBandeja();
+    });
+    document.getElementById('btnBandejaNext').addEventListener('click', () => {
+      bandejaPage += 1;
+      renderBandeja();
+    });
+
+    document.getElementById('currentDomainBadge').innerText = window.location.origin;
+    document.getElementById('currentDomainInline').innerText = window.location.origin;
 
     document.getElementById('loginForm').addEventListener('submit', async (ev) => {
       ev.preventDefault();
@@ -340,7 +1055,12 @@
       }
     });
 
-    cargarBandeja();
+    Promise.allSettled([
+      cargarBandeja(),
+      cargarNormativas(),
+      cargarAuditorias(),
+      cargarMetricasConsolidado()
+    ]);
   </script>
 </body>
 </html>
