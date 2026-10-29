@@ -1,0 +1,27 @@
+======================================================================================
+PLAN DE PRUEBAS SIMEL EL TAMBO - PMV 1 + PMV 2
+Fecha: 29/10/2026 16:34:27
+======================================================================================
+
+======================================================================================
+2. PRUEBAS REMOTAS DE HUMO: RENDER
+======================================================================================
+URL: https://proyecto-licencias.onrender.com
+
+ESTADO  | PRUEBA                             | DETALLE
+--------------------------------------------------------------------------------------
+PASS    | Dashboard /                        | HTTP 200, 67059 bytes
+PASS    | OpenAPI /docs                      | HTTP 200
+PASS    | Bandeja priorizada                 | total=507, F1=0.925
+PASS    | RAG normativas                     | total=23, motor=pgvector HNSW (vector_cosine_ops)
+PASS    | Metricas consolidadas              | F1=0.925, context=0.9998, fuente=supabase_rpc
+PASS    | Auditoria RAG conforme             | estado=CONFORME_PMV2, sim=0.9998
+PASS    | Indexacion vectorial               | dimensiones=16, id=FRAG-PLAN-PRUEBAS-2026
+PASS    | Historial auditorias               | total=2011
+PASS    | Login JWT                          | rol=EVALUADOR_LICENCIAS
+
+RESULTADO REMOTO: PASS (9/9)
+
+======================================================================================
+RESULTADO GENERAL: PASS
+======================================================================================

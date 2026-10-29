@@ -6,15 +6,99 @@
   <title>SIMEL - Municipalidad Distrital de El Tambo | PMV 1 + PMV 2</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
+    html { scroll-behavior: smooth; }
     :focus-visible { outline: 3px solid #f59e0b; outline-offset: 2px; }
     .skip-link { position: absolute; left: -9999px; top: 0; z-index: 50; }
     .skip-link:focus { left: 1rem; top: 1rem; background: #f59e0b; color: #020617; padding: .5rem .75rem; border-radius: .5rem; font-weight: 700; }
+    section[id] { scroll-margin-top: 1.5rem; }
+    .sidebar-scroll { scrollbar-width: thin; scrollbar-color: #334155 transparent; }
+    .sidebar-scroll::-webkit-scrollbar { width: 6px; }
+    .sidebar-scroll::-webkit-scrollbar-thumb { background: #334155; border-radius: 9999px; }
   </style>
 </head>
-<body class="bg-slate-100 text-slate-900 font-sans min-h-screen">
-  <!-- Barra Institucional Superior -->
+<body class="min-h-screen overflow-x-hidden bg-slate-100 font-sans text-slate-900">
   <a href="#contenido-principal" class="skip-link">Saltar al contenido principal</a>
-  <header class="bg-slate-900 text-white shadow-lg border-b-4 border-amber-500">
+
+  <div class="flex min-h-screen">
+    <!-- Menú Lateral de Navegación -->
+    <aside id="sidebar" class="fixed inset-y-0 left-0 z-50 flex w-72 -translate-x-full flex-col bg-slate-950 text-white shadow-2xl transition-transform duration-300 lg:translate-x-0" aria-label="Menú lateral del sistema">
+      <div class="flex items-center justify-between gap-3 border-b border-slate-800 px-5 py-5">
+        <div class="flex items-center gap-3">
+          <div class="flex h-11 w-11 items-center justify-center rounded-xl bg-amber-500 text-lg font-black text-slate-950">S</div>
+          <div>
+            <p class="text-lg font-black tracking-wide">SIMEL</p>
+            <p class="text-[10px] uppercase tracking-widest text-slate-400">El Tambo · PMV 1 + 2</p>
+          </div>
+        </div>
+        <button id="sidebarClose" type="button" class="rounded-lg p-2 text-slate-400 hover:bg-slate-800 hover:text-white lg:hidden" aria-label="Cerrar menú lateral">
+          <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <nav class="sidebar-scroll flex-1 space-y-1 overflow-y-auto px-3 py-5" aria-label="Secciones del sistema">
+        <p class="px-3 pb-2 text-[10px] font-bold uppercase tracking-widest text-slate-500">Panel general</p>
+        <a href="#panel-general" data-section-link class="group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-300 transition hover:bg-slate-800 hover:text-white">
+          <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-800 text-[11px] font-black text-slate-400 group-hover:bg-slate-700 group-hover:text-white">00</span>
+          <span>Resumen ejecutivo</span>
+        </a>
+
+        <p class="px-3 pb-2 pt-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">PMV 1 · Evaluación</p>
+        <a href="#modulo-auth" data-section-link class="group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-300 transition hover:bg-slate-800 hover:text-white">
+          <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-800 text-[11px] font-black text-slate-400 group-hover:bg-slate-700 group-hover:text-white">01</span>
+          <span>Autenticación JWT</span>
+        </a>
+        <a href="#modulo-ingesta" data-section-link class="group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-300 transition hover:bg-slate-800 hover:text-white">
+          <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-800 text-[11px] font-black text-slate-400 group-hover:bg-slate-700 group-hover:text-white">02</span>
+          <span>Ingesta y OCR</span>
+        </a>
+        <a href="#modulo-prediccion" data-section-link class="group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-300 transition hover:bg-slate-800 hover:text-white">
+          <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-800 text-[11px] font-black text-slate-400 group-hover:bg-slate-700 group-hover:text-white">03</span>
+          <span>Predicción de riesgo</span>
+        </a>
+        <a href="#modulo-bandeja" data-section-link class="group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-300 transition hover:bg-slate-800 hover:text-white">
+          <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-800 text-[11px] font-black text-slate-400 group-hover:bg-slate-700 group-hover:text-white">04</span>
+          <span>Bandeja priorizada</span>
+        </a>
+
+        <p class="px-3 pb-2 pt-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">PMV 2 · Auditoría</p>
+        <a href="#modulo-rag-index" data-section-link class="group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-300 transition hover:bg-slate-800 hover:text-white">
+          <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-800 text-[11px] font-black text-slate-400 group-hover:bg-slate-700 group-hover:text-white">05</span>
+          <span>Indexación pgvector</span>
+        </a>
+        <a href="#modulo-auditoria" data-section-link class="group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-300 transition hover:bg-slate-800 hover:text-white">
+          <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-800 text-[11px] font-black text-slate-400 group-hover:bg-slate-700 group-hover:text-white">06</span>
+          <span>Auditoría inter-fojas</span>
+        </a>
+        <a href="#modulo-masiva" data-section-link class="group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-300 transition hover:bg-slate-800 hover:text-white">
+          <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-800 text-[11px] font-black text-slate-400 group-hover:bg-slate-700 group-hover:text-white">07</span>
+          <span>Data masiva y métricas</span>
+        </a>
+
+        <p class="px-3 pb-2 pt-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">Recursos</p>
+        <a href="/docs" target="_blank" rel="noopener" class="group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-300 transition hover:bg-slate-800 hover:text-white">
+          <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-800 text-[11px] font-black text-slate-400 group-hover:bg-slate-700 group-hover:text-white">↗</span>
+          <span>Documentación API</span>
+        </a>
+      </nav>
+
+      <div class="border-t border-slate-800 p-4">
+        <div class="rounded-xl border border-slate-800 bg-slate-900 p-3">
+          <p class="text-[10px] font-bold uppercase tracking-widest text-slate-500">Estado del sistema</p>
+          <p class="mt-2 flex items-center gap-2 text-xs font-semibold text-emerald-400">
+            <span class="h-2 w-2 rounded-full bg-emerald-400"></span>
+            API conectada
+          </p>
+          <p id="sidebarDomain" class="mt-1 break-all font-mono text-[10px] text-slate-500">window.location.origin</p>
+        </div>
+        <p class="mt-3 text-center text-[10px] text-slate-600">Municipalidad Distrital de El Tambo</p>
+      </div>
+    </aside>
+
+    <div id="sidebarOverlay" class="fixed inset-0 z-40 hidden bg-slate-950/60 backdrop-blur-sm lg:hidden" aria-hidden="true"></div>
+
+    <div class="flex min-w-0 flex-1 flex-col lg:ml-72">
+      <!-- Barra Institucional Superior -->
+      <header class="bg-slate-900 text-white shadow-lg border-b-4 border-amber-500">
     <div class="max-w-7xl mx-auto px-6 py-4 flex flex-wrap justify-between items-center gap-4">
       <div>
         <span class="text-xs uppercase tracking-widest bg-amber-500 text-slate-950 font-bold px-2.5 py-0.5 rounded">Arquitectura Híbrida Hexagonal • PMV 1 + PMV 2</span>
@@ -22,6 +106,9 @@
         <p class="text-xs text-slate-300">Sistema Inteligente de Evaluación y Fiscalización Documental de Licencias (Ley N.° 28976 | Ley N.° 29733)</p>
         <p class="text-[11px] text-amber-300 font-mono mt-1 break-all">API pública: <span id="currentDomainBadge">window.location.origin</span></p>
       </div>
+      <button id="sidebarToggle" type="button" class="lg:hidden flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border-2 border-slate-700 bg-slate-800 text-white hover:bg-slate-700" aria-label="Abrir menú lateral">
+        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+      </button>
       <div id="userBadge" class="bg-slate-800 border border-slate-700 px-4 py-2 rounded-lg text-right">
         <p class="text-xs text-emerald-400 font-semibold" id="jwtStatus">● Sesión JWT Activa (TLS 1.3 / AES-256)</p>
         <p class="text-sm font-bold" id="userName">Ing. Simon Ronaldo Gonzales Jacinto</p>
@@ -33,7 +120,7 @@
 
   <main id="contenido-principal" class="max-w-7xl mx-auto px-6 py-6 space-y-6">
     <!-- Tarjetas de KPIs y Métricas de Machine Learning (PoC) -->
-    <section class="grid grid-cols-1 md:grid-cols-4 gap-4">
+    <section id="panel-general" class="grid grid-cols-1 md:grid-cols-4 gap-4">
       <div class="bg-white p-4 rounded-xl shadow border-l-4 border-blue-700">
         <p class="text-xs text-slate-500 uppercase font-bold">Total en Bandeja (HU05)</p>
         <p class="text-3xl font-extrabold text-slate-900 mt-1" id="kpiTotal">3</p>
@@ -57,7 +144,7 @@
     </section>
 
     <!-- Módulo HU01: Autenticación JWT -->
-    <section class="bg-white rounded-xl shadow p-5 border border-slate-200">
+    <section id="modulo-auth" class="bg-white rounded-xl shadow p-5 border border-slate-200">
       <div class="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h2 class="text-sm font-bold text-slate-800 uppercase">1. Módulo de Autenticación Institucional y Control de Acceso (PMV1-1-HU01)</h2>
@@ -79,7 +166,7 @@
     <!-- Panel Central: Izquierda Ingesta + OCR (HU02 y HU03) | Derecha Resultado Predictivo ML (HU04) -->
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
       <!-- Formulario de Ingesta y Extracción OCR -->
-      <section class="lg:col-span-7 bg-white rounded-xl shadow p-6 border border-slate-200">
+      <section id="modulo-ingesta" class="lg:col-span-7 bg-white rounded-xl shadow p-6 border border-slate-200">
         <h2 class="text-base font-bold text-slate-900 uppercase border-b pb-2">2. Ingesta Documental PDF y Extracción Óptica OCR (PMV1-2-HU02 y PMV1-3-HU03)</h2>
         <form id="evalForm" class="space-y-4 mt-4">
           <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -181,7 +268,7 @@
       </section>
 
       <!-- Panel Derecho: Resultado de Predicción de Riesgo ML (PMV1-4-HU04) -->
-      <section class="lg:col-span-5 bg-white rounded-xl shadow p-6 border border-slate-200 flex flex-col justify-between">
+      <section id="modulo-prediccion" class="lg:col-span-5 bg-white rounded-xl shadow p-6 border border-slate-200 flex flex-col justify-between">
         <div>
           <h2 class="text-base font-bold text-slate-900 uppercase border-b pb-2">3. Clasificación Predictiva de Riesgo (PMV1-4-HU04)</h2>
           <div id="resultadoMLBox" class="mt-4 space-y-4">
@@ -225,7 +312,7 @@
     </div>
 
     <!-- Bandeja Principal Priorizada (PMV1-5-HU05) -->
-    <section class="bg-white rounded-xl shadow p-6 border border-slate-200">
+    <section id="modulo-bandeja" class="bg-white rounded-xl shadow p-6 border border-slate-200">
       <div class="flex flex-wrap justify-between items-center gap-3 border-b pb-3">
         <div>
           <h2 class="text-base font-bold text-slate-900 uppercase">4. Bandeja de Fiscalización Priorizada por Inteligencia Artificial (PMV1-5-HU05)</h2>
@@ -265,7 +352,7 @@
     </section>
 
     <!-- SECCIÓN 5: INDEXACIÓN VECTORIAL PGVECTOR (PMV2-1-HU06) -->
-    <section class="bg-white rounded-xl shadow p-6 border border-slate-200">
+    <section id="modulo-rag-index" class="bg-white rounded-xl shadow p-6 border border-slate-200">
       <div class="flex flex-wrap justify-between items-start gap-3 border-b pb-3">
         <div>
           <h2 class="text-base font-bold text-slate-900 uppercase">5. Indexación Vectorial de Ordenanzas y TUPA en pgvector (HNSW) (PMV2-1-HU06)</h2>
@@ -358,7 +445,7 @@
     </section>
 
     <!-- SECCIÓN 6: MOTOR RAG + CRUCE INTER-FOJAS (PMV2-2-HU07 / PMV2-3-HU08) -->
-    <section class="bg-white rounded-xl shadow p-6 border border-slate-200">
+    <section id="modulo-auditoria" class="bg-white rounded-xl shadow p-6 border border-slate-200">
       <div class="border-b pb-3">
         <h2 class="text-base font-bold text-slate-900 uppercase">6. Motor RAG de Zonificación y Auditoría Cruzada Inter-Fojas (PMV2-2-HU07 / PMV2-3-HU08)</h2>
         <p class="text-xs text-slate-600">Similitud del Coseno sobre pgvector + validación de DNI/RUC, metraje y dirección entre la Declaración Jurada TUPA y el plano técnico.</p>
@@ -498,7 +585,7 @@
     </section>
 
     <!-- SECCIÓN 7: DATA MASIVA Y MONITOR DE STORED PROCEDURES (RÚBRICA S12) -->
-    <section class="bg-white rounded-xl shadow p-6 border border-slate-200">
+    <section id="modulo-masiva" class="bg-white rounded-xl shadow p-6 border border-slate-200">
       <div class="flex flex-wrap justify-between items-start gap-3 border-b pb-3">
         <div>
           <h2 class="text-base font-bold text-slate-900 uppercase">7. Simulador de Data Masiva (500 a 1000) y Monitor de Procedimientos Almacenados (Rúbrica S12)</h2>
@@ -996,6 +1083,24 @@
 
     document.getElementById('currentDomainBadge').innerText = window.location.origin;
     document.getElementById('currentDomainInline').innerText = window.location.origin;
+    document.getElementById('sidebarDomain').innerText = window.location.origin;
+
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebarOverlay');
+    const sidebarToggle = document.getElementById('sidebarToggle');
+    const sidebarClose = document.getElementById('sidebarClose');
+    const openSidebar = () => { sidebar.classList.remove('-translate-x-full'); overlay.classList.remove('hidden'); };
+    const closeSidebar = () => { sidebar.classList.add('-translate-x-full'); overlay.classList.add('hidden'); };
+    sidebarToggle?.addEventListener('click', openSidebar);
+    sidebarClose?.addEventListener('click', closeSidebar);
+    overlay?.addEventListener('click', closeSidebar);
+    document.querySelectorAll('[data-section-link]').forEach((link) => {
+      link.addEventListener('click', () => {
+        document.querySelectorAll('[data-section-link]').forEach((item) => item.classList.remove('bg-slate-800', 'text-white'));
+        link.classList.add('bg-slate-800', 'text-white');
+        if (window.innerWidth < 1024) closeSidebar();
+      });
+    });
 
     document.getElementById('loginForm').addEventListener('submit', async (ev) => {
       ev.preventDefault();

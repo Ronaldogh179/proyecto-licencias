@@ -10,9 +10,13 @@ services:
     dockerContext: .
     healthCheckPath: /
     envVars:
+      - key: ENVIRONMENT
+        value: production
       - key: SUPABASE_URL
         sync: false
       - key: SUPABASE_KEY
+        sync: false
+      - key: SUPABASE_SECRET_KEY
         sync: false
       - key: JWT_SECRET_KEY
         sync: false

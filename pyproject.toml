@@ -1,2 +1,7 @@
 [tool.vercel]
 entrypoint = "src.infrastructure.main:app"
+
+[tool.coverage.run]
+omit = [
+    "src/infrastructure/generar_artefactos.py",
+]

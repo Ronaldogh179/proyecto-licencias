@@ -1,16 +1,16 @@
 ﻿from dataclasses import asdict
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 from pydantic import BaseModel
 
+from src.adapters.inbound.api.dependencies import obtener_container
 from src.application.dto.expediente_dto import IngresoExpedienteInputDTO
 from src.application.dto.pmv2_dto import (
     AuditarExpedientePMV2InputDTO,
     GenerarLoteMasivoInputDTO,
     IndexarNormativaInputDTO,
 )
-from src.infrastructure.container import container
 
 router = APIRouter(prefix="/api/v1", tags=["PMV 1 - Evaluacion y Fiscalizacion de Licencias"])
 
@@ -20,8 +20,9 @@ class LoginRequest(BaseModel):
     rol: str = "EVALUADOR_LICENCIAS"
 
 @router.post("/auth/login", summary="PMV1-1-HU01: Autenticación Institucional JWT")
-def login_funcionario(req: LoginRequest):
+def login_funcionario(req: LoginRequest, request: Request):
     try:
+        container = obtener_container(request)
         resultado = container.auth_use_case.autenticar(req.correo, req.password, req.rol)
         return {"status": "ok", "data": resultado}
     except PermissionError as e:
@@ -29,6 +30,7 @@ def login_funcionario(req: LoginRequest):
 
 @router.post("/expedientes/evaluar", summary="PMV1-2 a HU05: Ingesta PDF + OCR + Predicción ML + Persistencia")
 async def evaluar_expediente_pmv1(
+    request: Request,
     codigo_expediente: str = Form(...),
     dni_ruc_titular: str = Form(...),
     razon_social_nombre: str = Form(...),
@@ -43,6 +45,7 @@ async def evaluar_expediente_pmv1(
     archivo_pdf: Optional[UploadFile] = File(None),
 ):
     try:
+        container = obtener_container(request)
         pdf_bytes = await archivo_pdf.read() if archivo_pdf else b""
         nombre_pdf = archivo_pdf.filename if archivo_pdf and archivo_pdf.filename else f"{codigo_expediente.lower()}.pdf"
 
@@ -73,7 +76,8 @@ async def evaluar_expediente_pmv1(
         raise HTTPException(status_code=422, detail=str(e))
 
 @router.get("/expedientes/bandeja", summary="PMV1-5-HU05: Listar Bandeja Priorizada por Riesgo ML")
-def listar_bandeja_priorizada():
+def listar_bandeja_priorizada(request: Request):
+    container = obtener_container(request)
     lista = container.listar_bandeja_use_case.obtener_bandeja_priorizada()
     return {
         "status": "ok",
@@ -174,8 +178,9 @@ def _serializar_dictamen(dictamen) -> Dict[str, Any]:
     tags=["PMV 2 - RAG Normativo"],
     summary="PMV2-1-HU06: Fragmentar, vectorizar e indexar normativa TUPA/Ordenanza en pgvector",
 )
-def indexar_normativa_rag(req: IndexarNormativaRagRequest):
+def indexar_normativa_rag(req: IndexarNormativaRagRequest, request: Request):
     try:
+        container = obtener_container(request)
         dto = IndexarNormativaInputDTO(
             norma_origen=req.norma_origen,
             articulo_inciso=req.articulo_inciso,
@@ -212,7 +217,8 @@ def indexar_normativa_rag(req: IndexarNormativaRagRequest):
     tags=["PMV 2 - RAG Normativo"],
     summary="PMV2-1-HU06: Listar fragmentos normativos vectorizados en pgvector",
 )
-def listar_normativas_rag():
+def listar_normativas_rag(request: Request):
+    container = obtener_container(request)
     fragmentos_por_id = {
         fragmento.id_fragmento: fragmento
         for fragmento in container.expediente_repo.listar_fragmentos_normativos()
@@ -234,8 +240,9 @@ def listar_normativas_rag():
     tags=["PMV 2 - RAG Normativo"],
     summary="PMV2-2-HU07 y PMV2-3-HU08: RAG de zonificación + auditoría cruzada inter-fojas",
 )
-def auditar_expediente_rag(req: AuditarExpedienteRagRequest):
+def auditar_expediente_rag(req: AuditarExpedienteRagRequest, request: Request):
     try:
+        container = obtener_container(request)
         dto = AuditarExpedientePMV2InputDTO(
             codigo_expediente=req.codigo_expediente,
             giro_comercial=req.giro_comercial,
@@ -262,7 +269,8 @@ def auditar_expediente_rag(req: AuditarExpedienteRagRequest):
     tags=["PMV 2 - RAG Normativo"],
     summary="PMV2-2-HU07 / PMV2-3-HU08: Historial de auditorías semánticas y cruces inter-fojas",
 )
-def listar_auditorias_rag():
+def listar_auditorias_rag(request: Request):
+    container = obtener_container(request)
     auditorias = container.expediente_repo.listar_auditorias_pmv2()
     auditorias_serializadas = [_serializar_dictamen(dictamen) for dictamen in auditorias]
     return {
@@ -277,8 +285,9 @@ def listar_auditorias_rag():
     tags=["PMV 2 - Data Masiva"],
     summary="Rúbrica S12 Ítem 9: Procesamiento masivo end-to-end de 500 a 1000 expedientes",
 )
-def ejecutar_carga_masiva(req: CargaMasivaRequest):
+def ejecutar_carga_masiva(req: CargaMasivaRequest, request: Request):
     try:
+        container = obtener_container(request)
         metricas = container.data_masiva_uc.ejecutar(
             GenerarLoteMasivoInputDTO(cantidad_transacciones=req.cantidad)
         )
@@ -321,7 +330,8 @@ def ejecutar_carga_masiva(req: CargaMasivaRequest):
     tags=["PMV 2 - Métricas"],
     summary="Rúbrica S12 Ítems 10 y 11: Métricas consolidadas ML (PMV1) + RAG (PMV2) + Stored Procedures",
 )
-def obtener_metricas_consolidadas():
+def obtener_metricas_consolidadas(request: Request):
+    container = obtener_container(request)
     metricas = container.expediente_repo.obtener_metricas_pmv1_pmv2()
     metricas_poc = container.entrenador_ml.metricas_poc
     xgboost = metricas_poc.get("xgboost", {})

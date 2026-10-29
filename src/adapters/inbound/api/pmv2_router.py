@@ -1,15 +1,15 @@
 from dataclasses import asdict
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 
+from src.adapters.inbound.api.dependencies import obtener_container
 from src.application.dto.pmv2_dto import (
     AuditarExpedientePMV2InputDTO,
     GenerarLoteMasivoInputDTO,
     IndexarNormativaInputDTO,
 )
-from src.infrastructure.container import container
 
 router = APIRouter(prefix="/api/v1/pmv2", tags=["PMV 2 - RAG Normativo y Auditoría Inter-Fojas"])
 
@@ -45,8 +45,9 @@ class GenerarLoteMasivoRequest(BaseModel):
 
 
 @router.post("/normativa/indexar", summary="PMV2-1-HU06: Indexar fragmento normativo con chunking y vector(16)")
-def indexar_normativa(req: IndexarNormativaRequest):
+def indexar_normativa(req: IndexarNormativaRequest, request: Request):
     try:
+        container = obtener_container(request)
         dto = IndexarNormativaInputDTO(**req.model_dump())
         fragmento = container.indexar_normativa_uc.ejecutar(dto)
         return {"status": "created", "fragmento": asdict(fragmento)}
@@ -55,8 +56,9 @@ def indexar_normativa(req: IndexarNormativaRequest):
 
 
 @router.post("/auditorias/auditar", summary="PMV2-2-HU07 y PMV2-3-HU08: RAG de zonificación + cruce inter-fojas")
-def auditar_expediente_pmv2(req: AuditarExpedientePMV2Request):
+def auditar_expediente_pmv2(req: AuditarExpedientePMV2Request, request: Request):
     try:
+        container = obtener_container(request)
         dto = AuditarExpedientePMV2InputDTO(**req.model_dump())
         dictamen = container.auditar_pmv2_uc.ejecutar(dto)
         return {"status": "ok", "dictamen": asdict(dictamen)}
@@ -65,7 +67,8 @@ def auditar_expediente_pmv2(req: AuditarExpedientePMV2Request):
 
 
 @router.get("/auditorias", summary="Listar dictámenes de auditoría PMV2")
-def listar_auditorias_pmv2():
+def listar_auditorias_pmv2(request: Request):
+    container = obtener_container(request)
     auditorias = container.expediente_repo.listar_auditorias_pmv2()
     return {
         "status": "ok",
@@ -75,7 +78,8 @@ def listar_auditorias_pmv2():
 
 
 @router.get("/fragmentos", summary="Listar fragmentos normativos vectorizados")
-def listar_fragmentos_normativos():
+def listar_fragmentos_normativos(request: Request):
+    container = obtener_container(request)
     fragmentos = container.expediente_repo.listar_fragmentos_normativos()
     return {
         "status": "ok",
@@ -85,8 +89,9 @@ def listar_fragmentos_normativos():
 
 
 @router.post("/data-masiva", summary="Generar y evaluar lote masivo de 500 a 1000 expedientes")
-def procesar_data_masiva(req: GenerarLoteMasivoRequest):
+def procesar_data_masiva(req: GenerarLoteMasivoRequest, request: Request):
     try:
+        container = obtener_container(request)
         dto = GenerarLoteMasivoInputDTO(cantidad_transacciones=req.cantidad_transacciones)
         metricas = container.data_masiva_uc.ejecutar(dto)
         return {"status": "ok", "metricas": metricas}
@@ -95,7 +100,8 @@ def procesar_data_masiva(req: GenerarLoteMasivoRequest):
 
 
 @router.get("/metricas", summary="Métricas consolidadas PMV1 + PMV2")
-def obtener_metricas_pmv1_pmv2():
+def obtener_metricas_pmv1_pmv2(request: Request):
+    container = obtener_container(request)
     return {
         "status": "ok",
         "metricas": container.expediente_repo.obtener_metricas_pmv1_pmv2(),
