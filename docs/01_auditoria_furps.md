@@ -1,103 +1,153 @@
-# SIMEL — 01 — Auditoría FURPS+ (línea base)
+# Proyecto SIMEL — Taller de Proyectos 1 / Semana 13
 
-**Curso:** Taller de Proyectos 1 — Semana 13, 12/11/2026.
-**Repositorio:** https://github.com/Ronaldogh179/proyecto-licencias
-**Código auditado (commit fijo):** `b81f5f2e0b1e2ff64d2d6535ff253b6e73498d88`.
-**Base:** SIMEL_SEMANA12(4).docx; Guía FURPS+ y OWASP(2).docx; transcripción docente.
-**Método:** inspección estática del código por conexión GitHub. No se han ejecutado pruebas dinámicas nuevas ni aplicado remediaciones. El informe de semana 12 (4) fue verificado como ejemplar disponible; no se dispone de la versión (3) para comprobar equivalencia.
+Repositorio: https://github.com/Ronaldogh179/proyecto-licencias
+Instantánea auditada: `b81f5f2e0b1e2ff64d2d6535ff253b6e73498d88` (rama `main`, corte de código revisado y confirmado 12/11/2026).
+Base documental: `SIMEL_SEMANA12(4).docx`, `Guia FURPS+ y OWASP(2).docx` y transcripción de clase.
+Fecha documental: 12/11/2026.
+**Alcance:** inspección estática de código GitHub en commit inmutable y resultados históricos diferenciados. Se actualizaron únicamente documentos de auditoría; no se modificó código ejecutable ni se realizaron pruebas dinámicas nuevas. La publicación de los Markdown en GitHub es documental, no remediación.
+
+**Aclaración documental:** se revisó el ejemplar proporcionado `SIMEL_SEMANA12(4).docx`. No se dispone del archivo `(3)` para acreditar que sea idéntico. Las cifras históricas solo se atribuyen al informe consultado.
+
+# 01 — Auditoría FURPS+ (línea base)
 
 ## Resumen ejecutivo
+Existen módulos PMV 1 y 2 y una estructura de puertos/adaptadores. La inspección identifica problemas de autenticación, autorización, errores PDF y persistencia; no valida cumplimiento funcional en ejecución ni un score final.
 
-Arquitectura hexagonal y funcionalidades PMV1/PMV2 observables en código. El diagnóstico identifica brechas críticas de autenticación, autorización y manejo de PDF y sincronización. Los puntajes siguientes son **parciales de inspección**, no certificación ni ensayos funcionales.
+## Matriz provisional del modelo del docente
+Escala referencial de Semana13.pdf: 5=cumple en la evidencia revisada; 3=parcial; 1=no cumple; NE=no evaluado. **Los puntajes son de inspección y NO equivalen a certificación de calidad ni prueba operacional.**
 
-## Matriz de evaluación FURPS+
+|Factor|ID|Criterio|Evidencia|PO|PD|Acción|
+|---|---|---|---|---:|---:|---|
+|F|F01|Existe flujo de autenticación en API|Código de ruta /auth/login; verificación defectuosa|3|5|Parcial: implementar verificación de contraseña; prueba HTTP.|
+|F|F02|Existe procesamiento y bandeja de expedientes|expediente_router.py: evaluar y bandeja|5|5|Presencia de implementación; verificar ejecución real.|
+|F|F03|Existen operaciones PMV 2: indexación y auditoría|pmv2_router.py: rutas POST y GET|5|5|Presencia de implementación; probar endpoints y resultados.|
+|F|F04|Las operaciones privadas exigen JWT/rol|Routers sin dependencia de seguridad visible|1|5|Agregar control de acceso y test 401/403.|
+|U|U01|Hay interfaz para ingresar y revisar datos|Informe SIMEL Semana 12 (capturas históricas del informe base; no reejecutadas)|3|5|Revisión de usabilidad y errores en ambiente actual pendiente.|
+|U|U02|Se verificó accesibilidad WCAG y navegación|No hay evaluación accesibilidad actual|NE|5|Ejecutar controles de teclado/contraste y pruebas con usuarios.|
+|R|R01|Los PDF inválidos generan error verificable|Fallback textual sintético ante excepciones|1|5|Definir rechazo o estado explícito.|
+|R|R02|La sincronización remota registra respuesta|httpx.post + except pass|1|5|Persistencia verificable y reporte de error.|
+|R|R03|Existe mecanismo de persistencia local alterna|Repositorio híbrido JSON local|5|5|Existencia de código; probar cortes de conexión.|
+|P|P01|Existen mediciones de carga de 600 y 1000|Informe SIMEL Semana 12 (mediciones históricas; capturas no reproducidas)|3|5|Repetir mediciones para la versión auditada.|
+|P|P02|Las cargas PDF tienen límite comprobable|await archivo_pdf.read() sin límite en handler|1|5|Agregar validación de tamaño y tipo.|
+|S|S01|El código está distribuido en capas hexagonales|domain/application/adapters/infrastructure|5|5|Verificar reglas de dependencia en auditoría futura.|
+|S|S02|Existen pruebas unitarias y de integración|Carpetas tests/unit y tests/integration|5|5|Ejecutar pruebas, cubrir casos negativos de seguridad.|
+|S|S03|Dependencias reproducibles y fijadas|requirements.txt sin versiones explícitas (según lista revisada)|1|5|Bloquear versiones y revisar CVE en dependencias.|
 
-Escala docente orientativa: 5=presencia/criterio cumplido en evidencia inspeccionada; 3=parcial; 1=no cumplido; NE=no evaluado. PO=puntaje observado; PD=deseado.
+Nivel de apego por factor solo para criterios puntuados: F 70,0 % (14/20); U 60,0 % (3/5, otro NE); R 46,7 % (7/15); P 40,0 % (4/10); S 73,3 % (11/15). Estos son índices parciales de inspección y no un score global.
 
-| Factor | ID | Criterio | PO | PD |
-|---|---|---|---|---|
-| F | F01 | Login JWT implementado pero validación de contraseña deficiente | 3 | 5 |
-| F | F02 | Recepción, clasificación y bandeja PMV1 definidas en rutas | 5 | 5 |
-| F | F03 | Indexación y auditoría PMV2 definidas en rutas | 5 | 5 |
-| F | F04 | Controles JWT/rol en rutas privadas | 1 | 5 |
-| U | U01 | Interfaz funcional ilustrada por informe histórico; sin prueba actual | 3 | 5 |
-| U | U02 | Accesibilidad WCAG/teclado no verificada | NE | 5 |
-| R | R01 | Manejo explícito de error PDF | 1 | 5 |
-| R | R02 | Verificación de sincronización remota | 1 | 5 |
-| R | R03 | Persistencia local alternativa implementada | 5 | 5 |
-| P | P01 | Mediciones históricas 600/1000, sin repetir | 3 | 5 |
-| P | P02 | Límite de carga PDF en handler | 1 | 5 |
-| S | S01 | Separación domain/application/adapters/infrastructure | 5 | 5 |
-| S | S02 | Carpetas de pruebas y tests presentes (ejecución pendiente) | 5 | 5 |
-| S | S03 | requirements.txt sin fijación de versiones | 1 | 5 |
+## Hallazgos
+### OW-01 — La verificación de contraseña no coteja el hash
+**Componente:** src/infrastructure/config.py (líneas 45–47) · **Prioridad preliminar:** Crítica para autenticación · **Factor:** Seguridad / F
 
-Factores puntuados: F 70,0 % (14/20); U 60,0 % (3/5, con otro criterio NE); R 46,7 % (7/15); P 40,0 % (4/10); S 73,3 % (11/15). Los resultados no son un score FURPS+ certificado.
+**Evidencia de código:** verificar_password() devuelve len(password_plano.strip()) >= 4 and bool(password_hash); no usa bcrypt/argon2 ni otro algoritmo comparativo.
 
-## Hallazgos con evidencia y tratamiento
+**Riesgo:** Un usuario existente podría recibir un token con cualquier contraseña de cuatro o más caracteres, pendiente de prueba controlada.
 
-### OW-01 — Verificación de contraseña sin cotejo de hash
+**Comprobación requerida:** Cuenta autorizada con contraseña correcta = 200; contraseña incorrecta de >=4 caracteres = 401; usuario inexistente = 401.
 
-- **Severidad preliminar:** Crítica; **referencia:** A07:2025, A04:2025.
-- **Evidencia:** [src/infrastructure/config.py:L45-L47](https://github.com/Ronaldogh179/proyecto-licencias/blob/b81f5f2e0b1e2ff64d2d6535ff253b6e73498d88/src/infrastructure/config.py#L45). verificar_password() comprueba solo que password tenga >=4 caracteres y exista password_hash; no compara ambos.
-- **Riesgo:** Un usuario existente podría autenticarse con una clave incorrecta.
-- **Plan:** Sustituir por verificación real de hash resistente (Argon2/bcrypt), migrar fixture de credenciales y evitar fallback.
-- **Prueba de aceptación pendiente:** Login correcto 200; contraseña incorrecta 401; usuario inexistente 401.
-- **Responsable propuesto:** Backend + QA. **Estado de implementación:** pendiente; no se presume corregido.
+**Recomendación:** Implementar un verificador de hashes real; migrar credenciales de demostración a hashes válidos.
 
-### OW-02 — Rutas PMV1 y PMV2 sin dependencia explícita de JWT
+**Estado de implementación:** no aplicado en esta auditoría; resultado dinámico pendiente.
 
-- **Severidad preliminar:** Crítica; **referencia:** A01:2025.
-- **Evidencia:** [src/adapters/inbound/api/pmv2_router.py:L47-L66](https://github.com/Ronaldogh179/proyecto-licencias/blob/b81f5f2e0b1e2ff64d2d6535ff253b6e73498d88/src/adapters/inbound/api/pmv2_router.py#L47). Los handlers de indexación y auditoría inspeccionados no declaran dependencia de autorización, situación análoga en el router PMV1.
-- **Riesgo:** Posibles operaciones sin identidad ni permisos verificados; requiere comprobación HTTP.
-- **Plan:** Dependencia centralizada de autenticación/autorización con permisos mínimos y rutas protegidas.
-- **Prueba de aceptación pendiente:** Sin JWT 401, token inválido 401, rol insuficiente 403, funcionario válido 2xx.
-- **Responsable propuesto:** Integración + QA. **Estado de implementación:** pendiente; no se presume corregido.
+**Enlace:** https://github.com/Ronaldogh179/proyecto-licencias/blob/b81f5f2e0b1e2ff64d2d6535ff253b6e73498d88/src/infrastructure/config.py#L45
 
-### OW-03 — Rol controlado por el cliente llega al JWT
+### OW-02 — Rutas de operaciones sin dependencias de autorización
+**Componente:** src/adapters/inbound/api/expediente_router.py y pmv2_router.py (líneas 31–87 y 47–109) · **Prioridad preliminar:** Crítica para control de acceso · **Factor:** Seguridad / F
 
-- **Severidad preliminar:** Alta; **referencia:** A01:2025, A06:2025.
-- **Evidencia:** [src/application/use_cases/procesar_expediente_uc.py:L22-L39](https://github.com/Ronaldogh179/proyecto-licencias/blob/b81f5f2e0b1e2ff64d2d6535ff253b6e73498d88/src/application/use_cases/procesar_expediente_uc.py#L22). Se usa rol=rol or usuario.rol_operativo al generar el token, y LoginRequest acepta rol enviado por el cliente.
-- **Riesgo:** Un usuario podría emitir un JWT con rol mayor al registrado; impacto pendiente de test.
-- **Plan:** Tomar rol únicamente del registro autorizado del usuario; probar escalamiento.
-- **Prueba de aceptación pendiente:** Solicitar rol no permitido: token refleja rol almacenado o solicitud es rechazada.
-- **Responsable propuesto:** Backend + QA. **Estado de implementación:** pendiente; no se presume corregido.
+**Evidencia de código:** Los handlers examinados no declaran Depends() de verificación de token o roles; main.py solo incorpora los routers.
 
-### FU-01 — Fallback engañoso ante errores de extracción PDF
+**Riesgo:** Acceso potencial a registros, indexación o auditoría sin una identidad validada, sujeto a verificación HTTP.
 
-- **Severidad preliminar:** Alta; **referencia:** A10:2025, A06:2025.
-- **Evidencia:** [src/adapters/outbound/ocr/tesseract_ocr_adapter.py:L16-L26; L58](https://github.com/Ronaldogh179/proyecto-licencias/blob/b81f5f2e0b1e2ff64d2d6535ff253b6e73498d88/src/adapters/outbound/ocr/tesseract_ocr_adapter.py#L16). Except genérico asigna texto descriptivo como si fuera extraído; confianza_ocr es constante 96.8.
-- **Riesgo:** Errores de documentos pueden pasar inadvertidos y afectar el resultado ML.
-- **Plan:** Señalar PDF corrupto/escaneado/sin texto y resultado verificable; no atribuir confianza ficticia.
-- **Prueba de aceptación pendiente:** PDF digital, escaneado, corrupto y sin adjunto: salida diferenciada.
-- **Responsable propuesto:** Backend/ML + QA. **Estado de implementación:** pendiente; no se presume corregido.
+**Comprobación requerida:** Sin token 401; token inválido o vencido 401; rol insuficiente 403; usuario legítimo conserva respuestas 2xx.
 
-### FU-02 — Sincronización remota oculta fallos
+**Recomendación:** Agregar dependencia reutilizable que valide firma, expiración y permisos; aplicar en rutas privadas de ambos PMV.
 
-- **Severidad preliminar:** Alta; **referencia:** A09:2025, A10:2025.
-- **Evidencia:** [src/adapters/outbound/persistence/supabase_repository_adapter.py:L114-L138](https://github.com/Ronaldogh179/proyecto-licencias/blob/b81f5f2e0b1e2ff64d2d6535ff253b6e73498d88/src/adapters/outbound/persistence/supabase_repository_adapter.py#L114). Las solicitudes httpx.post no validan status_code y las excepciones se silencian con pass.
-- **Riesgo:** Podría confundirse persistencia local con remota exitosa.
-- **Plan:** Comprobar estado de respuesta, registro seguro, estado de sincronización y reintentos controlados.
-- **Prueba de aceptación pendiente:** Mock de 401, 500, timeout, desconexión y reconciliación de registros.
-- **Responsable propuesto:** Integración + QA. **Estado de implementación:** pendiente; no se presume corregido.
+**Estado de implementación:** no aplicado en esta auditoría; resultado dinámico pendiente.
 
-### FU-03 — Lectura completa de PDF sin límite declarado
+**Enlaces:** https://github.com/Ronaldogh179/proyecto-licencias/blob/b81f5f2e0b1e2ff64d2d6535ff253b6e73498d88/src/adapters/inbound/api/expediente_router.py#L31-L49 y https://github.com/Ronaldogh179/proyecto-licencias/blob/b81f5f2e0b1e2ff64d2d6535ff253b6e73498d88/src/adapters/inbound/api/pmv2_router.py#L47-L66
 
-- **Severidad preliminar:** Media; **referencia:** A06:2025, A10:2025.
-- **Evidencia:** [src/adapters/inbound/api/expediente_router.py:L31-L50](https://github.com/Ronaldogh179/proyecto-licencias/blob/b81f5f2e0b1e2ff64d2d6535ff253b6e73498d88/src/adapters/inbound/api/expediente_router.py#L31). El handler ejecuta await archivo_pdf.read() sin tamaño máximo explícito.
-- **Riesgo:** Posible presión sobre memoria con archivos grandes, si no existe límite de infraestructura.
-- **Plan:** Límites de tamaño, tipo MIME validado y error 413/422 controlado.
-- **Prueba de aceptación pendiente:** Archivos debajo/encima del límite, corruptos y formato no válido.
-- **Responsable propuesto:** Integración + QA. **Estado de implementación:** pendiente; no se presume corregido.
+### OW-03 — El rol proporcionado por el cliente se incorpora al token
+**Componente:** src/application/use_cases/procesar_expediente_uc.py (líneas 22–38) · **Prioridad preliminar:** Alta · **Factor:** Seguridad / F
 
-### QA-01 — Pruebas históricas sin ejecución nueva vinculada al SHA
+**Evidencia de código:** El caso de uso pasa rol=rol or usuario.rol_operativo al generador JWT; el LoginRequest permite indicar rol.
 
-- **Severidad preliminar:** Media; **referencia:** Soportabilidad y fiabilidad FURPS+.
-- **Evidencia:** [tests/:repositorio](https://github.com/Ronaldogh179/proyecto-licencias/blob/b81f5f2e0b1e2ff64d2d6535ff253b6e73498d88/tests/#L1). Informe de semana 12 describe 28 pruebas y 93 % de cobertura, pero son antecedentes no repetidos sobre el commit actual.
-- **Riesgo:** No se acredita ausencia de regresiones en la instantánea auditada.
-- **Plan:** Fijar dependencias, ejecutar pytest, pytest-cov, guardar comandos, entorno y salida.
-- **Prueba de aceptación pendiente:** pytest -q; pytest --cov=src --cov-report=term-missing, resultados sin alterar.
-- **Responsable propuesto:** QA. **Estado de implementación:** pendiente; no se presume corregido.
+**Riesgo:** Un usuario con cuenta podría solicitar un rol distinto al registrado; el impacto requiere validación al incorporar autorización.
 
-## Alcance, límites y evidencias
+**Comprobación requerida:** Solicitar rol de mayor privilegio y verificar que el token refleje solo el rol real o se rechace.
 
-Las cifras históricas del Word de semana 12 (28 pruebas, 93 % cobertura, lotes de 600 y 1000) no se atribuyen a una nueva ejecución. Los paneles EV01–EV05 del ZIP son extractos visuales de líneas devueltas por la conexión de GitHub, **no capturas literales del navegador**. Se requieren pruebas dinámicas y capturas antes/después para cerrar estos hallazgos.
+**Recomendación:** Derivar claims de rol únicamente del repositorio de usuarios y comprobar la autorización efectiva.
+
+**Estado de implementación:** no aplicado en esta auditoría; resultado dinámico pendiente.
+
+**Enlace:** https://github.com/Ronaldogh179/proyecto-licencias/blob/b81f5f2e0b1e2ff64d2d6535ff253b6e73498d88/src/application/use_cases/procesar_expediente_uc.py#L22
+
+### FU-01 — La extracción PDF encubre errores y asigna confianza fija
+**Componente:** src/adapters/outbound/ocr/tesseract_ocr_adapter.py (líneas 16–24 y 48–59) · **Prioridad preliminar:** Alta · **Factor:** F / R
+
+**Evidencia de código:** Ante una excepción, se construye un texto descriptivo sustituto; ResultadoOCRDTO lleva confianza_ocr=96.8 sin cálculo basado en reconocimiento.
+
+**Riesgo:** Clasificación a partir de contenido no extraído y percepción engañosa de confianza del procesamiento.
+
+**Comprobación requerida:** Pruebas con PDF digital válido, escaneado, vacío/corrupto y sin archivo; verificar estado y trazabilidad.
+
+**Recomendación:** Diferenciar PDF digital, PDF escaneado, PDF inválido y ausencia de adjunto; definir error o estado revisable, sin confianza inventada.
+
+**Estado de implementación:** no aplicado en esta auditoría; resultado dinámico pendiente.
+
+**Enlace:** https://github.com/Ronaldogh179/proyecto-licencias/blob/b81f5f2e0b1e2ff64d2d6535ff253b6e73498d88/src/adapters/outbound/ocr/tesseract_ocr_adapter.py#L16
+
+### FU-02 — Sincronización remota sin verificar resultado ni registrar fallo
+**Componente:** src/adapters/outbound/persistence/supabase_repository_adapter.py (líneas 114–139) · **Prioridad preliminar:** Alta para trazabilidad · **Factor:** R / S
+
+**Evidencia de código:** Las llamadas httpx.post no comprueban status_code; los except Exception hacen pass silencioso.
+
+**Riesgo:** La copia local puede aparentar sincronización exitosa sin evidencia de persistencia remota.
+
+**Comprobación requerida:** Simular 401, 500, timeout y corte de red; verificar alertas, respuesta de la API y consistencia.
+
+**Recomendación:** Validar respuesta HTTP; registrar fallos sin exponer datos personales o secretos; señalar estado local/remoto y reintentos seguros.
+
+**Estado de implementación:** no aplicado en esta auditoría; resultado dinámico pendiente.
+
+**Enlace:** https://github.com/Ronaldogh179/proyecto-licencias/blob/b81f5f2e0b1e2ff64d2d6535ff253b6e73498d88/src/adapters/outbound/persistence/supabase_repository_adapter.py#L114
+
+### FU-03 — Carga del PDF a memoria sin límite visible en endpoint
+**Componente:** src/adapters/inbound/api/expediente_router.py (líneas 31–50) · **Prioridad preliminar:** Media · **Factor:** P / R
+
+**Evidencia de código:** Se usa await archivo_pdf.read() sin un tamaño máximo explícito en el handler inspeccionado.
+
+**Riesgo:** Posible agotamiento de recursos frente a archivos grandes si no existen límites efectivos aguas arriba.
+
+**Comprobación requerida:** PDF cercano al límite, superior al límite y de tipo no soportado; verificar 413/422 y estabilidad.
+
+**Recomendación:** Establecer tamaño máximo, tipo permitido y gestión de archivos inválidos con respuesta controlada.
+
+**Estado de implementación:** no aplicado en esta auditoría; resultado dinámico pendiente.
+
+**Enlace:** https://github.com/Ronaldogh179/proyecto-licencias/blob/b81f5f2e0b1e2ff64d2d6535ff253b6e73498d88/src/adapters/inbound/api/expediente_router.py#L31
+
+### QA-01 — Pruebas históricas sin reproducción atribuible a commit actual
+**Componente:** SIMEL_SEMANA12(4).docx, Anexo 4; tests/ del repositorio (líneas Anexo 4 / árbol de pruebas) · **Prioridad preliminar:** Media · **Factor:** S / P
+
+**Evidencia de código:** El informe anterior indica 28 pruebas aprobadas y 93 % de cobertura; su captura muestra componentes adicionales y no evidencia ejecución sobre el SHA auditado.
+
+**Riesgo:** No puede inferirse el rendimiento ni la cobertura actual de cada PMV solo desde una captura anterior.
+
+**Comprobación requerida:** pytest -q; pytest --cov=src --cov-report=term-missing; comparar con baseline sin asumir equivalencia.
+
+**Recomendación:** Crear baseline reproducible del commit, ejecutar pytest/cobertura y registrar por separado PMV 1 y PMV 2.
+
+**Estado de implementación:** no aplicado en esta auditoría; resultado dinámico pendiente.
+
+**Enlace:** SIMEL_SEMANA12(4).docx, Anexo 4; tests/ del repositorio
+
+
+## Riesgos residuales
+No hay evidencias de pruebas negativas de autorización, análisis automatizado de dependencia, evaluación WCAG ni métricas de memoria actuales.
+
+## Recomendación general
+Priorizar autenticación y autorización, luego fallos del procesamiento PDF y sincronización; ejecutar suite de regresión antes/después.
+
+## Verificación adicional de evidencias del corte actual
+
+Se consultaron directamente las líneas del commit `b81f5f2e0b1e2ff64d2d6535ff253b6e73498d88` en GitHub para OW-01, OW-02, OW-03, FU-01 y FU-02. Las fichas textuales EV01–EV05 y el manifiesto del ZIP indican los enlaces permanentes a los fragmentos; los paneles gráficos previos se excluyeron por no ser capturas auténticas. **Evidencia estática de código no sustituye prueba dinámica, y los paneles no son capturas de navegador.**
