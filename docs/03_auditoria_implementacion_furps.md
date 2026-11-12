@@ -1,31 +1,32 @@
-# SIMEL — 03 — Auditoría de implementación FURPS+
+# Proyecto SIMEL — Taller de Proyectos 1 / Semana 13
 
-**Curso:** Taller de Proyectos 1 — Semana 13, 12/11/2026.
-**Repositorio:** https://github.com/Ronaldogh179/proyecto-licencias
-**Código auditado (commit fijo):** `b81f5f2e0b1e2ff64d2d6535ff253b6e73498d88`.
-**Base:** SIMEL_SEMANA12(4).docx; Guía FURPS+ y OWASP(2).docx; transcripción docente.
-**Método:** inspección estática del código por conexión GitHub. No se han ejecutado pruebas dinámicas nuevas ni aplicado remediaciones. El informe de semana 12 (4) fue verificado como ejemplar disponible; no se dispone de la versión (3) para comprobar equivalencia.
+Repositorio: https://github.com/Ronaldogh179/proyecto-licencias
+Instantánea auditada: `b81f5f2e0b1e2ff64d2d6535ff253b6e73498d88` (rama `main`, corte de código revisado y confirmado 12/11/2026).
+Base documental: `SIMEL_SEMANA12(4).docx`, `Guia FURPS+ y OWASP(2).docx` y transcripción de clase.
+Fecha documental: 12/11/2026.
+**Alcance:** inspección estática de código GitHub en commit inmutable y resultados históricos diferenciados. Se actualizaron únicamente documentos de auditoría; no se modificó código ejecutable ni se realizaron pruebas dinámicas nuevas. La publicación de los Markdown en GitHub es documental, no remediación.
 
-## Estado del corte de semana 13
+**Aclaración documental:** se revisó el ejemplar proporcionado `SIMEL_SEMANA12(4).docx`. No se dispone del archivo `(3)` para acreditar que sea idéntico. Las cifras históricas solo se atribuyen al informe consultado.
 
-**NO EJECUTADA.** No se identificó un commit correctivo posterior al SHA auditado ni se corrió la suite en esta revisión. La publicación documental de esta carpeta no es implementación ni verificación de regresión.
+# 03 — Auditoría de implementación FURPS+
+
+## Estado real del corte
+**NO EJECUTADA**: durante esta preparación se consultó código y documentación, pero no se aplicaron cambios al repositorio ni se reejecutó la suite. No puede afirmarse que las mejoras fueron implementadas.
 
 ## Comparación antes/después
 
-| ID | Antes verificado por inspección | Después | Validación |
-|---|---|---|---|
-| OW-01 | verificar_password() comprueba solo que password tenga >=4 caracteres y exista password_hash; no compara ambos. | Sin modificación de código demostrada | Pendiente: Login correcto 200; contraseña incorrecta 401; usuario inexistente 401. |
-| OW-02 | Los handlers de indexación y auditoría inspeccionados no declaran dependencia de autorización, situación análoga en el router PMV1. | Sin modificación de código demostrada | Pendiente: Sin JWT 401, token inválido 401, rol insuficiente 403, funcionario válido 2xx. |
-| OW-03 | Se usa rol=rol or usuario.rol_operativo al generar el token, y LoginRequest acepta rol enviado por el cliente. | Sin modificación de código demostrada | Pendiente: Solicitar rol no permitido: token refleja rol almacenado o solicitud es rechazada. |
-| FU-01 | Except genérico asigna texto descriptivo como si fuera extraído; confianza_ocr es constante 96.8. | Sin modificación de código demostrada | Pendiente: PDF digital, escaneado, corrupto y sin adjunto: salida diferenciada. |
-| FU-02 | Las solicitudes httpx.post no validan status_code y las excepciones se silencian con pass. | Sin modificación de código demostrada | Pendiente: Mock de 401, 500, timeout, desconexión y reconciliación de registros. |
-| FU-03 | El handler ejecuta await archivo_pdf.read() sin tamaño máximo explícito. | Sin modificación de código demostrada | Pendiente: Archivos debajo/encima del límite, corruptos y formato no válido. |
-| QA-01 | Informe de semana 12 describe 28 pruebas y 93 % de cobertura, pero son antecedentes no repetidos sobre el commit actual. | Sin modificación de código demostrada | Pendiente: pytest -q; pytest --cov=src --cov-report=term-missing, resultados sin alterar. |
+|Hallazgo|Antes|Después|Estado|Evidencia faltante|
+|---|---|---|---|---|
+|OW-01|verificar_password() devuelve len(password_plano.strip()) >= 4 and bool(password_hash); no usa bcrypt/argon2 ni otro algoritmo comparativo.|No se ha observado una versión modificada|No implementado / pendiente|PR/commit nuevo, test de aceptación y captura de ejecución|
+|OW-02|Los handlers examinados no declaran Depends() de verificación de token o roles; main.py solo incorpora los routers.|No se ha observado una versión modificada|No implementado / pendiente|PR/commit nuevo, test de aceptación y captura de ejecución|
+|OW-03|El caso de uso pasa rol=rol or usuario.rol_operativo al generador JWT; el LoginRequest permite indicar rol.|No se ha observado una versión modificada|No implementado / pendiente|PR/commit nuevo, test de aceptación y captura de ejecución|
+|FU-01|Ante una excepción, se construye un texto descriptivo sustituto; ResultadoOCRDTO lleva confianza_ocr=96.8 sin cálculo basado en reconocimiento.|No se ha observado una versión modificada|No implementado / pendiente|PR/commit nuevo, test de aceptación y captura de ejecución|
+|FU-02|Las llamadas httpx.post no comprueban status_code; los except Exception hacen pass silencioso.|No se ha observado una versión modificada|No implementado / pendiente|PR/commit nuevo, test de aceptación y captura de ejecución|
+|FU-03|Se usa await archivo_pdf.read() sin un tamaño máximo explícito en el handler inspeccionado.|No se ha observado una versión modificada|No implementado / pendiente|PR/commit nuevo, test de aceptación y captura de ejecución|
+|QA-01|El informe anterior indica 28 pruebas aprobadas y 93 % de cobertura; su captura muestra componentes adicionales y no evidencia ejecución sobre el SHA auditado.|No se ha observado una versión modificada|No implementado / pendiente|PR/commit nuevo, test de aceptación y captura de ejecución|
 
-## Riesgo residual
+## Riesgos residuales
+Persisten los riesgos estáticos descritos en `01_auditoria_furps.md`. No se ha verificado regresión, compatibilidad ni recuperación.
 
-Persisten los riesgos de autenticación y autorización (críticos), PDF y persistencia (altos), límites de carga y trazabilidad de pruebas (medios). La ausencia de cambio no demuestra compatibilidad operacional ni ausencia de regresión.
-
-## Condición para cierre
-
-Solicitar SHA correctivo, diff/PR, resultado de pruebas pytest y cobertura, logs/capturas reales y pruebas negativas/positivas por ID. Hasta entonces: **pendiente**, sin puntaje final afirmado.
+## Conclusión
+Validación de implementación pendiente; no declarar cumplimiento.
