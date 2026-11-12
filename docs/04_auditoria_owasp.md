@@ -133,4 +133,4 @@ Código del commit en los enlaces de cada ficha; las imágenes E01–E05 dentro 
 
 ## Procedencia visual de evidencia confirmada
 
-Las fichas textuales EV01–EV05 del ZIP incluyen líneas contrastadas contra GitHub y enlaces permanentes al SHA auditado. Las imágenes construidas en versiones anteriores se retiraron: **no hay capturas auténticas de la interfaz GitHub en esta versión**. No se realizaron pruebas dinámicas.
+Las fichas EV01–EV05 del ZIP incluyen enlaces permanentes y capturas reales de la interfaz GitHub del SHA auditado. Las imágenes muestran evidencia de inspección estática; no se realizaron pruebas dinámicas ni se verificó explotación.
