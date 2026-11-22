@@ -6,7 +6,7 @@ Historias de Usuario: PMV3-1-HU09 (orquestación multiagente) y PMV3-2-HU10
 """
 
 from dataclasses import dataclass, field
-from typing import List
+from typing import List, Optional
 
 
 @dataclass
@@ -53,7 +53,7 @@ class PreDictamenMultiagentePMV3Domain:
     funcionario_evaluador_firma: str = ""
     observaciones_funcionario_hitl: str = ""
     fecha_generacion_ia: str = ""
-    fecha_resolucion_hitl: str = ""
+    fecha_resolucion_hitl: Optional[str] = None
     latencia_total_grafo_ms: float = 0.0
     tipo_importancia_xai: str = "global_feature_importance_xgboost"
     context_precision_rag_tipo: str = (

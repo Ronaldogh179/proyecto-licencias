@@ -537,7 +537,7 @@ class HybridSupabaseExpedienteRepository(
             fecha_resolucion_hitl=(
                 "2026-10-29T12:30:00+00:00"
                 if decision != "PENDIENTE_REVISION_HITL"
-                else ""
+                else None
             ),
             latencia_total_grafo_ms=4.3,
         )

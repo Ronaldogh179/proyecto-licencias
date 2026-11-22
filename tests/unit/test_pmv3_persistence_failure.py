@@ -14,6 +14,13 @@ class _RespuestaFallida:
         return {"message": "fallo simulado"}
 
 
+class _RespuestaExitosa:
+    status_code = 201
+
+    def json(self):
+        return {"status": "ok"}
+
+
 @pytest.fixture
 def repositorio_remoto(tmp_path, monkeypatch):
     monkeypatch.setenv("SUPABASE_URL", "https://proyecto.example.supabase.co")
@@ -65,3 +72,31 @@ def test_registrar_hitl_fallido_revierte_decision(repositorio_remoto, monkeypatc
 
     assert asdict(predictamen) == estado_inicial
     assert repositorio_remoto._predictamenes_file.read_text(encoding="utf-8") == contenido_inicial
+
+
+def test_payload_predictamen_pendiente_usa_fecha_resolucion_nula(repositorio_remoto, monkeypatch):
+    import src.adapters.outbound.persistence.supabase_repository_adapter as modulo
+
+    capturado = {}
+
+    def _post(url, **kwargs):
+        capturado.update(kwargs.get("json", {}))
+        return _RespuestaExitosa()
+
+    monkeypatch.setattr(modulo.httpx, "post", _post)
+    predictamen = repositorio_remoto._construir_predictamen_semilla(
+        codigo_expediente="EXP-2026-PAYLOAD-NULO",
+        decision="PENDIENTE_REVISION_HITL",
+        probabilidad=0.5,
+        nivel="MEDIO",
+        similitud=0.9,
+        compatibilidad="COMPATIBLE",
+        conforme_interfojas=True,
+        discrepancias=0,
+        recomendacion="Revisar.",
+        dias=1,
+    )
+
+    repositorio_remoto.guardar_predictamen_pmv3(predictamen)
+
+    assert capturado["fecha_resolucion_hitl"] is None
