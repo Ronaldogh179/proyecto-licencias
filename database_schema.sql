@@ -344,6 +344,7 @@ $$;
 
 -- =================================================================================
 -- PMV 3: GOBERNANZA MULTIAGENTE Y HUMAN-IN-THE-LOOP (PMV3-1-HU09 / PMV3-2-HU10)
+-- Acceso: Render usa SUPABASE_SECRET_KEY (service_role) contra PostgREST.
 -- =================================================================================
 
 ALTER TABLE dictamenes_auditoria
@@ -408,6 +409,17 @@ ALTER TABLE predictamenes_pmv3
 CREATE INDEX IF NOT EXISTS idx_predictamenes_pmv3_codigo
     ON predictamenes_pmv3 (codigo_expediente);
 
+-- RLS: el backend usa service_role; anon/authenticated no tienen privilegios sobre PMV3.
+ALTER TABLE public.predictamenes_pmv3 ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS pmd_pmv3_service_role_all ON public.predictamenes_pmv3;
+CREATE POLICY pmd_pmv3_service_role_all
+    ON public.predictamenes_pmv3
+    FOR ALL
+    TO service_role
+    USING (true)
+    WITH CHECK (true);
+
 CREATE OR REPLACE FUNCTION sp_registrar_resolucion_hitl_pmv3(
     p_codigo_expediente TEXT,
     p_decision_final_humano TEXT,
@@ -422,7 +434,32 @@ DECLARE
     nuevo_estado VARCHAR(30);
 BEGIN
     IF p_decision_final_humano NOT IN ('APROBADO_HITL', 'OBSERVADO_HITL', 'RECHAZADO_HITL') THEN
-        RAISE EXCEPTION 'Decisión HITL inválida: %', p_decision_final_humano;
+        RAISE EXCEPTION 'Decisión HITL inválida: %', p_decision_final_humano
+            USING ERRCODE = '22023';
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM public.predictamenes_pmv3
+        WHERE codigo_expediente = p_codigo_expediente
+    ) THEN
+        RAISE EXCEPTION 'Falta el predictamen PMV3 indispensable para %', p_codigo_expediente
+            USING ERRCODE = 'P0002';
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM public.dictamenes_auditoria
+        WHERE codigo_expediente = p_codigo_expediente
+    ) THEN
+        RAISE EXCEPTION 'Falta el dictamen PMV2 indispensable para %', p_codigo_expediente
+            USING ERRCODE = 'P0002';
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM public.expedientes
+        WHERE codigo_expediente = p_codigo_expediente
+    ) THEN
+        RAISE EXCEPTION 'Falta el expediente indispensable para %', p_codigo_expediente
+            USING ERRCODE = 'P0002';
     END IF;
 
     nuevo_estado := CASE p_decision_final_humano
@@ -431,23 +468,43 @@ BEGIN
         ELSE 'RECHAZADO_IMPROCEDENTE_ZONIFICACION'
     END;
 
-    UPDATE predictamenes_pmv3
-    SET decision_final_humano = p_decision_final_humano,
-        funcionario_evaluador_firma = p_funcionario_evaluador_firma,
-        observaciones_funcionario_hitl = p_observaciones_funcionario_hitl,
-        fecha_resolucion_hitl = p_fecha_resolucion_hitl
-    WHERE codigo_expediente = p_codigo_expediente;
+    BEGIN
+        UPDATE public.predictamenes_pmv3
+        SET decision_final_humano = p_decision_final_humano,
+            funcionario_evaluador_firma = p_funcionario_evaluador_firma,
+            observaciones_funcionario_hitl = p_observaciones_funcionario_hitl,
+            fecha_resolucion_hitl = p_fecha_resolucion_hitl
+        WHERE codigo_expediente = p_codigo_expediente;
 
-    UPDATE dictamenes_auditoria
-    SET decision_final_humano = p_decision_final_humano,
-        funcionario_evaluador_firma = p_funcionario_evaluador_firma,
-        observaciones_funcionario_hitl = p_observaciones_funcionario_hitl,
-        fecha_resolucion_hitl = p_fecha_resolucion_hitl
-    WHERE codigo_expediente = p_codigo_expediente;
+        IF NOT FOUND THEN
+            RAISE EXCEPTION 'No se pudo actualizar el predictamen PMV3 de %', p_codigo_expediente
+                USING ERRCODE = 'P0002';
+        END IF;
 
-    UPDATE expedientes
-    SET estado_tramite = nuevo_estado
-    WHERE codigo_expediente = p_codigo_expediente;
+        UPDATE public.dictamenes_auditoria
+        SET decision_final_humano = p_decision_final_humano,
+            funcionario_evaluador_firma = p_funcionario_evaluador_firma,
+            observaciones_funcionario_hitl = p_observaciones_funcionario_hitl,
+            fecha_resolucion_hitl = p_fecha_resolucion_hitl
+        WHERE codigo_expediente = p_codigo_expediente;
+
+        IF NOT FOUND THEN
+            RAISE EXCEPTION 'No se pudo actualizar el dictamen PMV2 de %', p_codigo_expediente
+                USING ERRCODE = 'P0002';
+        END IF;
+
+        UPDATE public.expedientes
+        SET estado_tramite = nuevo_estado
+        WHERE codigo_expediente = p_codigo_expediente;
+
+        IF NOT FOUND THEN
+            RAISE EXCEPTION 'No se pudo actualizar el expediente de %', p_codigo_expediente
+                USING ERRCODE = 'P0002';
+        END IF;
+    EXCEPTION
+        WHEN OTHERS THEN
+            RAISE;
+    END;
 
     resultado := jsonb_build_object(
         'status', 'ok',
@@ -461,31 +518,15 @@ BEGIN
 END;
 $$;
 
--- Permisos mínimos para la API con clave de servicio y para usuarios autenticados.
--- Los bloques condicionales permiten aplicar el mismo archivo en PostgreSQL local y Supabase.
-REVOKE ALL ON FUNCTION sp_registrar_resolucion_hitl_pmv3(TEXT, TEXT, TEXT, TEXT, TIMESTAMPTZ) FROM PUBLIC;
+ALTER FUNCTION sp_registrar_resolucion_hitl_pmv3(TEXT, TEXT, TEXT, TEXT, TIMESTAMPTZ)
+    SECURITY INVOKER
+    SET search_path = public, pg_temp;
 
-DO $$
-BEGIN
-    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'service_role') THEN
-        GRANT USAGE ON SCHEMA public TO service_role;
-        GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO service_role;
-        GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO service_role;
-        ALTER DEFAULT PRIVILEGES IN SCHEMA public
-            GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO service_role;
-        ALTER DEFAULT PRIVILEGES IN SCHEMA public
-            GRANT EXECUTE ON FUNCTIONS TO service_role;
-    END IF;
-
-    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'authenticated') THEN
-        GRANT USAGE ON SCHEMA public TO authenticated;
-        GRANT SELECT, INSERT, UPDATE ON predictamenes_pmv3 TO authenticated;
-        GRANT EXECUTE ON FUNCTION sp_registrar_resolucion_hitl_pmv3(TEXT, TEXT, TEXT, TEXT, TIMESTAMPTZ) TO authenticated;
-    END IF;
-
-    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'anon') THEN
-        REVOKE ALL ON TABLE usuarios, predictamenes_pmv3 FROM anon;
-        REVOKE ALL ON FUNCTION sp_registrar_resolucion_hitl_pmv3(TEXT, TEXT, TEXT, TEXT, TIMESTAMPTZ) FROM anon;
-    END IF;
-END
-$$;
+-- Solo el backend con service_role puede operar PMV3. PMV1/PMV2 no se modifican.
+REVOKE ALL ON TABLE public.predictamenes_pmv3 FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION sp_registrar_resolucion_hitl_pmv3(TEXT, TEXT, TEXT, TEXT, TIMESTAMPTZ)
+    FROM PUBLIC, anon, authenticated;
+GRANT USAGE ON SCHEMA public TO service_role;
+GRANT SELECT, INSERT, UPDATE ON TABLE public.predictamenes_pmv3 TO service_role;
+GRANT EXECUTE ON FUNCTION sp_registrar_resolucion_hitl_pmv3(TEXT, TEXT, TEXT, TEXT, TIMESTAMPTZ)
+    TO service_role;
