@@ -62,23 +62,61 @@ def _get_text(url: str, timeout: int = HTTP_TIMEOUT, attempts: int = 4) -> tuple
     raise last_error or RuntimeError("Error de conexiÃ³n desconocido")
 
 
+def _get_bytes(
+    url: str,
+    headers: dict | None = None,
+    timeout: int = HTTP_TIMEOUT,
+    attempts: int = 4,
+) -> tuple[int, bytes, str]:
+    last_error: Exception | None = None
+    cabeceras = {"Accept": "application/pdf"}
+    if headers:
+        cabeceras.update(headers)
+    for attempt in range(attempts):
+        try:
+            request = urllib.request.Request(url, headers=cabeceras)
+            with urllib.request.urlopen(request, timeout=timeout) as response:
+                return (
+                    response.status,
+                    response.read(),
+                    response.headers.get("Content-Type", ""),
+                )
+        except urllib.error.HTTPError as error:
+            last_error = error
+            if error.code >= 500 and attempt + 1 < attempts:
+                time.sleep(10)
+                continue
+            raise
+        except Exception as error:  # noqa: BLE001
+            last_error = error
+            if attempt + 1 < attempts:
+                time.sleep(10)
+                continue
+            raise
+
+    raise last_error or RuntimeError("Error de conexi��n desconocido")
+
+
 def _request_json(
     url: str,
     method: str = "GET",
     payload: dict | None = None,
+    headers: dict | None = None,
     timeout: int = HTTP_TIMEOUT,
 ) -> tuple[int, dict]:
     data = None
-    headers = {"Accept": "application/json"}
+    request_headers = {"Accept": "application/json"}
+    if headers:
+        request_headers.update(headers)
     if payload is not None:
         data = json.dumps(payload).encode("utf-8")
-        headers["Content-Type"] = "application/json"
+        request_headers["Content-Type"] = "application/json"
 
     last_error: Exception | None = None
     attempts = 4 if method == "GET" else 1
     for attempt in range(attempts):
         try:
-            request = urllib.request.Request(url, data=data, headers=headers, method=method)
+            request = urllib.request.Request(url, data=data, headers=request_headers, method=method)
             with urllib.request.urlopen(request, timeout=timeout) as response:
                 body = response.read().decode("utf-8", errors="replace")
                 return response.status, json.loads(body) if body else {}
@@ -149,6 +187,10 @@ def run_remote(report: Report, base_url: str) -> bool:
     report.emit("-" * 86)
 
     results: list[bool] = []
+    auth_token = ""
+
+    def auth_headers() -> dict:
+        return {"Authorization": f"Bearer {auth_token}"} if auth_token else {}
 
     def check(name: str, action) -> None:
         try:
@@ -167,13 +209,19 @@ def run_remote(report: Report, base_url: str) -> bool:
         return status == 200, f"HTTP {status}"
 
     def bandeja():
-        status, data = _request_json(f"{base_url}/api/v1/expedientes/bandeja")
+        status, data = _request_json(
+            f"{base_url}/api/v1/expedientes/bandeja",
+            headers=auth_headers(),
+        )
         total = int(data.get("total", 0))
         f1 = float(data.get("metricas_modelos_poc", {}).get("xgboost", {}).get("f1_test", 0))
         return status == 200 and total >= 3 and f1 >= 0.85, f"total={total}, F1={f1}"
 
     def normativas():
-        status, data = _request_json(f"{base_url}/api/v1/rag/normativas")
+        status, data = _request_json(
+            f"{base_url}/api/v1/rag/normativas",
+            headers=auth_headers(),
+        )
         total = int(data.get("total", 0))
         motor = str(data.get("motor_vectorial", ""))
         return status == 200 and total >= 20 and "pgvector" in motor, f"total={total}, motor={motor}"
@@ -206,6 +254,7 @@ def run_remote(report: Report, base_url: str) -> bool:
             f"{base_url}/api/v1/rag/auditar-expediente",
             method="POST",
             payload=payload,
+            headers=auth_headers(),
         )
         auditoria_data = data.get("auditoria", {})
         return (
@@ -233,6 +282,7 @@ def run_remote(report: Report, base_url: str) -> bool:
             f"{base_url}/api/v1/rag/indexar-normativa",
             method="POST",
             payload=payload,
+            headers=auth_headers(),
         )
         return (
             status == 200
@@ -242,33 +292,130 @@ def run_remote(report: Report, base_url: str) -> bool:
         )
 
     def historial():
-        status, data = _request_json(f"{base_url}/api/v1/rag/auditorias")
+        status, data = _request_json(
+            f"{base_url}/api/v1/rag/auditorias",
+            headers=auth_headers(),
+        )
         total = int(data.get("total", 0))
         return status == 200 and total >= 1, f"total={total}"
 
     def login():
-        payload = {
-            "correo": "evaluador@eltambo.gob.pe",
-            "password": "municipal2026",
-            "rol": "EVALUADOR_LICENCIAS",
-        }
+        nonlocal auth_token
+        correo = os.getenv("SIMEL_REMOTE_USER", "").strip()
+        password = os.getenv("SIMEL_REMOTE_PASSWORD", "").strip()
+        if not correo or not password:
+            return False, "SIMEL_REMOTE_USER y SIMEL_REMOTE_PASSWORD no configuradas"
         status, data = _request_json(
             f"{base_url}/api/v1/auth/login",
             method="POST",
-            payload=payload,
+            payload={"correo": correo, "password": password},
         )
         token = str(data.get("data", {}).get("access_token", ""))
+        if status == 200 and token:
+            auth_token = token
         return status == 200 and len(token) > 20, f"rol={data.get('data', {}).get('rol')}"
+
+    def pmv3_orquestar():
+        payload = {
+            "codigo_expediente": "EXP-2026-PMV3-REMOTE",
+            "giro_comercial": "Restaurante",
+            "zona_urbana": "RDM",
+            "area_declarada_tupa_m2": 110.5,
+            "area_plano_arquitectura_m2": 82.0,
+            "dni_ruc_tupa": "20601122334",
+            "dni_ruc_documento_identidad": "10728491023",
+            "documentos_faltantes": 2,
+            "inconsistencias_detectadas": 1,
+            "documento_critico_faltante": 1,
+            "dias_habiles_transcurridos": 2,
+        }
+        status, data = _request_json(
+            f"{base_url}/api/v1/pmv3/predictamen/orquestar",
+            method="POST",
+            payload=payload,
+            headers=auth_headers(),
+        )
+        predictamen = data.get("predictamen", {})
+        cita = str(predictamen.get("cita_legal_consolidada", ""))
+        return (
+            status == 200
+            and data.get("status") == "success"
+            and int(predictamen.get("iteraciones_grafo", 0)) >= 1
+            and int(predictamen.get("alucinaciones_detectadas", 1)) == 0
+            and "28976" in cita
+            and "31814" in cita,
+            f"iter={predictamen.get('iteraciones_grafo')}, aluc={predictamen.get('alucinaciones_detectadas')}",
+        )
+
+    def pmv3_listar():
+        status, data = _request_json(
+            f"{base_url}/api/v1/pmv3/predictamenes",
+            headers=auth_headers(),
+        )
+        total = int(data.get("total", 0))
+        return status == 200 and total >= 3, f"total={total}"
+
+    def pmv3_hitl():
+        payload = {
+            "codigo_expediente": "EXP-2026-PMV3-REMOTE",
+            "decision_final_humano": "OBSERVADO_HITL",
+            "funcionario_evaluador": "evaluador@eltambo.gob.pe",
+            "observaciones_funcionario": "Se notifica esquela de subsanacion documental.",
+        }
+        status, data = _request_json(
+            f"{base_url}/api/v1/pmv3/hitl/resolver",
+            method="POST",
+            payload=payload,
+            headers=auth_headers(),
+        )
+        predictamen = data.get("predictamen", {})
+        return (
+            status == 200
+            and data.get("status") == "success"
+            and data.get("auditoria_inmutable") is True
+            and predictamen.get("decision_final_humano") == "OBSERVADO_HITL",
+            f"decision={predictamen.get('decision_final_humano')}",
+        )
+
+    def pmv3_acta():
+        status, content, content_type = _get_bytes(
+            f"{base_url}/api/v1/pmv3/acta-pdf/EXP-2026-PMV3-REMOTE",
+            headers=auth_headers(),
+        )
+        return (
+            status == 200
+            and content_type.startswith("application/pdf")
+            and content.startswith(b"%PDF-"),
+            f"HTTP {status}, {len(content)} bytes, tipo={content_type}",
+        )
+
+    def pmv3_metricas():
+        status, data = _request_json(f"{base_url}/api/v1/metricas/consolidado")
+        sp = data.get("stored_procedures", {})
+        pmv3 = data.get("pmv3_multiagente_hitl", {})
+        return (
+            status == 200
+            and data.get("status") == "ok"
+            and int(sp.get("total_activos_sistema", 0)) == 5
+            and int(pmv3.get("total_predictamenes_pmv3", 0)) >= 3
+            and float(pmv3.get("tasa_supervision_humana_pct", 0)) == 100.0,
+            f"predictamenes={pmv3.get('total_predictamenes_pmv3')}, SP={sp.get('total_activos_sistema')}",
+        )
 
     check("Dashboard /", dashboard)
     check("OpenAPI /docs", docs)
+    check("Login JWT", login)
     check("Bandeja priorizada", bandeja)
     check("RAG normativas", normativas)
     check("Metricas consolidadas", metricas)
     check("Auditoria RAG conforme", auditoria)
     check("Indexacion vectorial", indexacion)
     check("Historial auditorias", historial)
-    check("Login JWT", login)
+    check("PMV3 orquestar LangGraph", pmv3_orquestar)
+    check("PMV3 listar predictamenes", pmv3_listar)
+    check("PMV3 resolucion HITL", pmv3_hitl)
+    check("PMV3 acta PDF", pmv3_acta)
+    check("PMV3 metricas HITL", pmv3_metricas)
 
     ok = all(results)
     report.emit("")
@@ -286,7 +433,7 @@ def main() -> int:
 
     report = Report()
     report.emit("=" * 86)
-    report.emit("PLAN DE PRUEBAS SIMEL EL TAMBO - PMV 1 + PMV 2")
+    report.emit("PLAN DE PRUEBAS SIMEL EL TAMBO - PMV 1 + PMV 2 + PMV 3")
     report.emit(f"Fecha: {datetime.now():%d/%m/%Y %H:%M:%S}")
     report.emit("=" * 86)
     report.emit("")

@@ -341,3 +341,151 @@ BEGIN
     RETURN resultado;
 END;
 $$;
+
+-- =================================================================================
+-- PMV 3: GOBERNANZA MULTIAGENTE Y HUMAN-IN-THE-LOOP (PMV3-1-HU09 / PMV3-2-HU10)
+-- =================================================================================
+
+ALTER TABLE dictamenes_auditoria
+    ADD COLUMN IF NOT EXISTS decision_final_humano VARCHAR(50) DEFAULT 'PENDIENTE_REVISION_HITL',
+    ADD COLUMN IF NOT EXISTS funcionario_evaluador_firma VARCHAR(150) DEFAULT '',
+    ADD COLUMN IF NOT EXISTS observaciones_funcionario_hitl TEXT DEFAULT '',
+    ADD COLUMN IF NOT EXISTS iteraciones_grafo INT DEFAULT 1,
+    ADD COLUMN IF NOT EXISTS temperatura_llm NUMERIC(4,2) DEFAULT 0.10,
+    ADD COLUMN IF NOT EXISTS fecha_resolucion_hitl TIMESTAMPTZ;
+
+-- Persistencia de pre-dictámenes PMV3: el adaptador híbrido ejecuta un UPSERT REST
+-- sobre esta tabla (on_conflict=codigo_expediente) y mantiene caché local JSON.
+-- No existe ni se invoca sp_registrar_predictamen_pmv3; la resolución HITL sí usa
+-- sp_registrar_resolucion_hitl_pmv3 (definida más abajo).
+
+CREATE TABLE IF NOT EXISTS predictamenes_pmv3 (
+    id_predictamen TEXT PRIMARY KEY,
+    id_expediente TEXT NOT NULL,
+    codigo_expediente VARCHAR(25) UNIQUE NOT NULL,
+    razon_social_nombre VARCHAR(150) NOT NULL,
+    giro_comercial VARCHAR(80) NOT NULL,
+    zona_urbana VARCHAR(20) NOT NULL,
+    area_comercial_m2 NUMERIC(8,2) NOT NULL,
+    probabilidad_riesgo_ml NUMERIC(5,4) NOT NULL,
+    nivel_riesgo_ml VARCHAR(15) NOT NULL,
+    similitud_coseno_rag NUMERIC(5,4) NOT NULL,
+    context_precision_rag NUMERIC(5,4) NOT NULL,
+    compatibilidad_zonificacion VARCHAR(40) NOT NULL,
+    es_conforme_interfojas BOOLEAN NOT NULL DEFAULT TRUE,
+    total_discrepancias_interfojas INT NOT NULL DEFAULT 0,
+    temperatura_llm NUMERIC(4,2) NOT NULL DEFAULT 0.10,
+    iteraciones_grafo INT NOT NULL DEFAULT 1,
+    alucinaciones_detectadas INT NOT NULL DEFAULT 0,
+    recomendacion_ia VARCHAR(50) NOT NULL,
+    cita_legal_consolidada TEXT NOT NULL,
+    texto_predictamen_explicable TEXT NOT NULL,
+    dias_habiles_transcurridos INT NOT NULL DEFAULT 1,
+    dias_restantes_sla INT NOT NULL DEFAULT 7,
+    estado_semaforo_sla VARCHAR(40) NOT NULL,
+    cumple_sla_legal BOOLEAN NOT NULL DEFAULT TRUE,
+    decision_final_humano VARCHAR(50) NOT NULL DEFAULT 'PENDIENTE_REVISION_HITL',
+    funcionario_evaluador_firma VARCHAR(150) DEFAULT '',
+    observaciones_funcionario_hitl TEXT DEFAULT '',
+    fecha_generacion_ia TIMESTAMPTZ DEFAULT NOW(),
+    fecha_resolucion_hitl TIMESTAMPTZ,
+    latencia_total_grafo_ms NUMERIC(10,3) DEFAULT 0.000,
+    nodos_ejecutados JSONB NOT NULL DEFAULT '[]'::jsonb,
+    tipo_importancia_xai VARCHAR(80) DEFAULT 'global_feature_importance_xgboost',
+    context_precision_rag_tipo VARCHAR(80) DEFAULT 'heuristica_experimental_derivada_de_similitud_coseno',
+    motor_tipo VARCHAR(50) DEFAULT 'determinista_sin_llm',
+    alucinaciones_detectadas_no_aplica BOOLEAN DEFAULT TRUE
+);
+
+ALTER TABLE predictamenes_pmv3
+    ADD COLUMN IF NOT EXISTS id_expediente TEXT,
+    ADD COLUMN IF NOT EXISTS nodos_ejecutados JSONB DEFAULT '[]'::jsonb,
+    ADD COLUMN IF NOT EXISTS tipo_importancia_xai VARCHAR(80) DEFAULT 'global_feature_importance_xgboost',
+    ADD COLUMN IF NOT EXISTS context_precision_rag_tipo VARCHAR(80) DEFAULT 'heuristica_experimental_derivada_de_similitud_coseno',
+    ADD COLUMN IF NOT EXISTS motor_tipo VARCHAR(50) DEFAULT 'determinista_sin_llm',
+    ADD COLUMN IF NOT EXISTS alucinaciones_detectadas_no_aplica BOOLEAN DEFAULT TRUE;
+
+CREATE INDEX IF NOT EXISTS idx_predictamenes_pmv3_codigo
+    ON predictamenes_pmv3 (codigo_expediente);
+
+CREATE OR REPLACE FUNCTION sp_registrar_resolucion_hitl_pmv3(
+    p_codigo_expediente TEXT,
+    p_decision_final_humano TEXT,
+    p_funcionario_evaluador_firma TEXT,
+    p_observaciones_funcionario_hitl TEXT,
+    p_fecha_resolucion_hitl TIMESTAMPTZ
+) RETURNS JSONB
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    resultado JSONB;
+    nuevo_estado VARCHAR(30);
+BEGIN
+    IF p_decision_final_humano NOT IN ('APROBADO_HITL', 'OBSERVADO_HITL', 'RECHAZADO_HITL') THEN
+        RAISE EXCEPTION 'Decisión HITL inválida: %', p_decision_final_humano;
+    END IF;
+
+    nuevo_estado := CASE p_decision_final_humano
+        WHEN 'APROBADO_HITL' THEN 'APROBADO_CON_LICENCIA'
+        WHEN 'OBSERVADO_HITL' THEN 'OBSERVADO_NOTIFICADO_HITL'
+        ELSE 'RECHAZADO_IMPROCEDENTE_ZONIFICACION'
+    END;
+
+    UPDATE predictamenes_pmv3
+    SET decision_final_humano = p_decision_final_humano,
+        funcionario_evaluador_firma = p_funcionario_evaluador_firma,
+        observaciones_funcionario_hitl = p_observaciones_funcionario_hitl,
+        fecha_resolucion_hitl = p_fecha_resolucion_hitl
+    WHERE codigo_expediente = p_codigo_expediente;
+
+    UPDATE dictamenes_auditoria
+    SET decision_final_humano = p_decision_final_humano,
+        funcionario_evaluador_firma = p_funcionario_evaluador_firma,
+        observaciones_funcionario_hitl = p_observaciones_funcionario_hitl,
+        fecha_resolucion_hitl = p_fecha_resolucion_hitl
+    WHERE codigo_expediente = p_codigo_expediente;
+
+    UPDATE expedientes
+    SET estado_tramite = nuevo_estado
+    WHERE codigo_expediente = p_codigo_expediente;
+
+    resultado := jsonb_build_object(
+        'status', 'ok',
+        'codigo_expediente', p_codigo_expediente,
+        'decision_final_humano', p_decision_final_humano,
+        'estado_expediente', nuevo_estado,
+        'funcionario_evaluador_firma', p_funcionario_evaluador_firma,
+        'fecha_resolucion_hitl', p_fecha_resolucion_hitl
+    );
+    RETURN resultado;
+END;
+$$;
+
+-- Permisos mínimos para la API con clave de servicio y para usuarios autenticados.
+-- Los bloques condicionales permiten aplicar el mismo archivo en PostgreSQL local y Supabase.
+REVOKE ALL ON FUNCTION sp_registrar_resolucion_hitl_pmv3(TEXT, TEXT, TEXT, TEXT, TIMESTAMPTZ) FROM PUBLIC;
+
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'service_role') THEN
+        GRANT USAGE ON SCHEMA public TO service_role;
+        GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO service_role;
+        GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO service_role;
+        ALTER DEFAULT PRIVILEGES IN SCHEMA public
+            GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO service_role;
+        ALTER DEFAULT PRIVILEGES IN SCHEMA public
+            GRANT EXECUTE ON FUNCTIONS TO service_role;
+    END IF;
+
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'authenticated') THEN
+        GRANT USAGE ON SCHEMA public TO authenticated;
+        GRANT SELECT, INSERT, UPDATE ON predictamenes_pmv3 TO authenticated;
+        GRANT EXECUTE ON FUNCTION sp_registrar_resolucion_hitl_pmv3(TEXT, TEXT, TEXT, TEXT, TIMESTAMPTZ) TO authenticated;
+    END IF;
+
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'anon') THEN
+        REVOKE ALL ON TABLE usuarios, predictamenes_pmv3 FROM anon;
+        REVOKE ALL ON FUNCTION sp_registrar_resolucion_hitl_pmv3(TEXT, TEXT, TEXT, TEXT, TIMESTAMPTZ) FROM anon;
+    END IF;
+END
+$$;

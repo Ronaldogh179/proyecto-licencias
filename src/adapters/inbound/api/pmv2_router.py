@@ -1,10 +1,16 @@
 from dataclasses import asdict
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 
-from src.adapters.inbound.api.dependencies import obtener_container
+from src.adapters.inbound.api.dependencies import (
+    ROL_ADMIN_TI,
+    ROL_EVALUADOR,
+    ROL_MESA_PARTES,
+    obtener_container,
+    requerir_roles,
+)
 from src.application.dto.pmv2_dto import (
     AuditarExpedientePMV2InputDTO,
     GenerarLoteMasivoInputDTO,
@@ -12,6 +18,9 @@ from src.application.dto.pmv2_dto import (
 )
 
 router = APIRouter(prefix="/api/v1/pmv2", tags=["PMV 2 - RAG Normativo y Auditoría Inter-Fojas"])
+
+ROLES_OPERACION = (ROL_EVALUADOR, ROL_ADMIN_TI)
+ROLES_CONSULTA = (ROL_EVALUADOR, ROL_MESA_PARTES, ROL_ADMIN_TI)
 
 
 class IndexarNormativaRequest(BaseModel):
@@ -44,7 +53,11 @@ class GenerarLoteMasivoRequest(BaseModel):
     cantidad_transacciones: int = 600
 
 
-@router.post("/normativa/indexar", summary="PMV2-1-HU06: Indexar fragmento normativo con chunking y vector(16)")
+@router.post(
+    "/normativa/indexar",
+    summary="PMV2-1-HU06: Indexar fragmento normativo con chunking y vector(16)",
+    dependencies=[Depends(requerir_roles(*ROLES_OPERACION))],
+)
 def indexar_normativa(req: IndexarNormativaRequest, request: Request):
     try:
         container = obtener_container(request)
@@ -55,7 +68,11 @@ def indexar_normativa(req: IndexarNormativaRequest, request: Request):
         raise HTTPException(status_code=422, detail=str(error))
 
 
-@router.post("/auditorias/auditar", summary="PMV2-2-HU07 y PMV2-3-HU08: RAG de zonificación + cruce inter-fojas")
+@router.post(
+    "/auditorias/auditar",
+    summary="PMV2-2-HU07 y PMV2-3-HU08: RAG de zonificación + cruce inter-fojas",
+    dependencies=[Depends(requerir_roles(*ROLES_OPERACION))],
+)
 def auditar_expediente_pmv2(req: AuditarExpedientePMV2Request, request: Request):
     try:
         container = obtener_container(request)
@@ -66,7 +83,11 @@ def auditar_expediente_pmv2(req: AuditarExpedientePMV2Request, request: Request)
         raise HTTPException(status_code=422, detail=str(error))
 
 
-@router.get("/auditorias", summary="Listar dictámenes de auditoría PMV2")
+@router.get(
+    "/auditorias",
+    summary="Listar dictámenes de auditoría PMV2",
+    dependencies=[Depends(requerir_roles(*ROLES_CONSULTA))],
+)
 def listar_auditorias_pmv2(request: Request):
     container = obtener_container(request)
     auditorias = container.expediente_repo.listar_auditorias_pmv2()
@@ -88,7 +109,11 @@ def listar_fragmentos_normativos(request: Request):
     }
 
 
-@router.post("/data-masiva", summary="Generar y evaluar lote masivo de 500 a 1000 expedientes")
+@router.post(
+    "/data-masiva",
+    summary="Generar y evaluar lote masivo de 500 a 1000 expedientes",
+    dependencies=[Depends(requerir_roles(*ROLES_OPERACION))],
+)
 def procesar_data_masiva(req: GenerarLoteMasivoRequest, request: Request):
     try:
         container = obtener_container(request)
