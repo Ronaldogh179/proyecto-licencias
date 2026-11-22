@@ -128,9 +128,16 @@ El único warning es `StarletteDeprecationWarning` de `starlette.testclient` con
 
 ---
 
-## 6. Pendiente
+## 6. Verificación adicional previa a publicación
 
-1. Validar `database_schema.sql` en una base PostgreSQL desechable: aplicación limpia, upgrade, idempotencia, UPSERT de `predictamenes_pmv3`, RPC HITL y grants. No ejecutado aquí por ausencia de Docker/psql.
-2. Desplegar `v3.0.0` a `main`/Render para ejecutar REM-10 a REM-14 (pendientes).
-3. Ejecutar pruebas remotas con `SIMEL_REMOTE_USER` y `SIMEL_REMOTE_PASSWORD`; el script ya envía JWT pero no modifica Supabase de prueba.
-4. Completar evidencias de prueba de usuario/actas de validación académica si la rúbrica «forbs y el otro» las exige; no se encontró ese documento en el repositorio.
+- Docker, Podman, `psql`, `pg_ctl` e `initdb` no están instalados. Se usó PostgreSQL embebido 18.6 vía paquete Python local y `pglast` para validación sintáctica.
+- `pglast`: esquema completo analizado con `PARSE_OK`.
+- Ejecución adaptada por ausencia de las extensiones `pgcrypto` y `vector` en el binario embebido: 7 tablas y 5 funciones creadas; reejecución idempotente 2/2; columnas PMV3 eliminadas y restauradas `0 -> 2`; grants verificados para `service_role` (SELECT/INSERT/UPDATE/DELETE) y `authenticated` (SELECT/INSERT/UPDATE); RPC `sp_registrar_resolucion_hitl_pmv3` devolvió `status=ok`.
+- Arranque limpio desde worktree separado en `ef65b38`, sin Supabase remoto: dashboard 200, login JWT, bandeja `total=3`, flujo con PDF real (`riesgo=ALTO`), orquestación PMV3 (`iter=2`, `aluc=0`), HITL `OBSERVADO_HITL` y Acta PDF de 5375 bytes con cabecera `%PDF`.
+- `render.yaml` de `origin/main` confirma `branch: main` y `autoDeploy: true`; la fusión en `main` activa el despliegue automático en Render.
+
+## 7. Pendiente
+
+1. Tras el merge en `main`, confirmar que Render complete el deploy y ejecutar la migración real del esquema en Supabase, ya que la validación local usó una copia adaptada sin extensiones propietarias.
+2. Ejecutar REM-10 a REM-14 con `SIMEL_REMOTE_USER` y `SIMEL_REMOTE_PASSWORD`; el script ya envía JWT.
+3. Completar evidencias de prueba de usuario/actas de validación académica si la rúbrica «forbs y el otro» las exige; no se encontró ese documento en el repositorio.
