@@ -771,6 +771,52 @@ class HybridSupabaseExpedienteRepository(
             "latencia_rag_ms": dictamen.latencia_rag_ms,
         }
 
+    def _payload_dictamen_tabla_remoto(
+        self, dictamen: DictamenAuditoriaPMV2Domain
+    ) -> Dict[str, Any]:
+        cruce = dictamen.resultado_cruce
+        return {
+            "id_dictamen": dictamen.id_dictamen,
+            "codigo_expediente": dictamen.codigo_expediente,
+            "giro_comercial": dictamen.giro_comercial,
+            "zona_urbana": dictamen.zona_urbana,
+            "similitud_coseno_rag": dictamen.similitud_coseno_rag,
+            "context_precision": dictamen.context_precision,
+            "compatibilidad_uso": dictamen.compatibilidad_zonificacion,
+            "cita_legal_exacta": dictamen.cita_legal_exacta[:180],
+            "texto_normativo_recuperado": dictamen.texto_normativo_recuperado,
+            "diferencia_area_m2": cruce.diferencia_area_m2,
+            "alerta_discrepancia_interfojas": not cruce.es_conforme_cruce,
+            "detalle_inconsistencias_json": cruce.alertas_detectadas,
+            "pre_dictamen_resumen": dictamen.pre_dictamen_explicable,
+            "decision_final_humano": "PENDIENTE_REVISION_HITL",
+            "iteraciones_grafo": 2 if cruce.total_discrepancias else 1,
+            "temperatura_llm": 0.1,
+            "latencia_rag_ms": dictamen.latencia_rag_ms,
+        }
+
+    def _sincronizar_dictamen_a_supabase_cloud(
+        self, dictamen: DictamenAuditoriaPMV2Domain
+    ) -> None:
+        if not self._supabase_url or not self._supabase_key:
+            return
+        try:
+            respuesta = httpx.post(
+                f"{self._supabase_url}/rest/v1/dictamenes_auditoria?on_conflict=id_dictamen",
+                json=self._payload_dictamen_tabla_remoto(dictamen),
+                headers=self._headers,
+                timeout=8.0,
+            )
+        except Exception as error:
+            raise RuntimeError(
+                f"No se pudo persistir el dictamen PMV2 en Supabase: {error}"
+            ) from error
+        if respuesta.status_code >= 300:
+            raise RuntimeError(
+                "No se pudo persistir el dictamen PMV2 en Supabase. "
+                f"HTTP {respuesta.status_code}."
+            )
+
     def _payload_dictamen_rpc(self, dictamen: DictamenAuditoriaPMV2Domain) -> Dict[str, Any]:
         payload_tabla = self._payload_dictamen_tabla(dictamen)
         return {f"p_{clave}": valor for clave, valor in payload_tabla.items()}
@@ -779,6 +825,7 @@ class HybridSupabaseExpedienteRepository(
         self,
         dictamen: DictamenAuditoriaPMV2Domain,
     ) -> DictamenAuditoriaPMV2Domain:
+        self._sincronizar_dictamen_a_supabase_cloud(dictamen)
         self._auditorias = [
             existente
             for existente in self._auditorias
@@ -786,7 +833,6 @@ class HybridSupabaseExpedienteRepository(
         ]
         self._auditorias.append(dictamen)
         self._persistir_auditorias_en_disco()
-        self.registrar_auditoria_cruzada_pmv2(dictamen)
         return dictamen
 
     def guardar_lote_auditorias_pmv2(
@@ -803,7 +849,10 @@ class HybridSupabaseExpedienteRepository(
             try:
                 httpx.post(
                     f"{self._supabase_url}/rest/v1/dictamenes_auditoria?on_conflict=id_dictamen",
-                    json=[self._payload_dictamen_tabla(dictamen) for dictamen in dictamenes],
+                    json=[
+                        self._payload_dictamen_tabla_remoto(dictamen)
+                        for dictamen in dictamenes
+                    ],
                     headers=self._headers,
                     timeout=8.0,
                 )

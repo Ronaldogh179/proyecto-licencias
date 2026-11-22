@@ -1,6 +1,13 @@
 from src.adapters.outbound.persistence.supabase_repository_adapter import (
     HybridSupabaseExpedienteRepository,
 )
+
+
+class _RespuestaPostExitosa:
+    status_code = 201
+
+    def json(self):
+        return []
 from src.domain.entities.normativa_rag import (
     DictamenAuditoriaPMV2Domain,
     FragmentoNormativoDomain,
@@ -98,3 +105,52 @@ def test_repositorio_hibrido_fallback_local_completo(tmp_path, monkeypatch):
     assert carga["total_fragmentos_normativos"] == 1
     assert carga["modo_persistencia"] == "local_cache"
     assert carga["fuente"] == "cache_local"
+
+
+def test_guardar_auditoria_pmv2_persiste_columnas_reales_supabase(tmp_path, monkeypatch):
+    monkeypatch.setenv("SUPABASE_URL", "https://proyecto.example.supabase.co")
+    monkeypatch.setenv("SUPABASE_SECRET_KEY", "clave-servicio-de-pruebas")
+    repo = HybridSupabaseExpedienteRepository(
+        db_path=str(tmp_path / "bd_expedientes_test.json")
+    )
+    capturado = {}
+
+    def _post(url, **kwargs):
+        capturado["url"] = url
+        capturado["json"] = kwargs.get("json")
+        return _RespuestaPostExitosa()
+
+    monkeypatch.setattr(
+        "src.adapters.outbound.persistence.supabase_repository_adapter.httpx.post",
+        _post,
+    )
+    dictamen = DictamenAuditoriaPMV2Domain(
+        id_dictamen="123e4567-e89b-12d3-a456-426614174000",
+        codigo_expediente="EXP-2026-PMV2-REMOTO",
+        giro_comercial="Restaurante",
+        zona_urbana="RDM",
+        similitud_coseno_rag=0.9999,
+        context_precision=0.9999,
+        compatibilidad_zonificacion="COMPATIBLE_CON_RESTRICCION",
+        cita_legal_exacta="Ordenanza Municipal N.° 018-2024-MDT/CM, Artículo 12.º",
+        texto_normativo_recuperado="Texto normativo remoto.",
+        resultado_cruce=ResultadoCruceInterFojasDomain(
+            dni_ruc_coincide=True,
+            area_coincide=False,
+            diferencia_area_m2=28.5,
+            direccion_coincide=True,
+            total_discrepancias=1,
+            alertas_detectadas=["Discordancia de metraje."],
+            es_conforme_cruce=False,
+        ),
+        estado_auditoria_pmv2="OBSERVADO_POR_ZONIFICACION",
+        pre_dictamen_explicable="Dictamen remoto.",
+        latencia_rag_ms=1.25,
+    )
+
+    assert repo.guardar_auditoria_pmv2(dictamen) is dictamen
+    assert capturado["url"].endswith("/rest/v1/dictamenes_auditoria?on_conflict=id_dictamen")
+    assert capturado["json"]["compatibilidad_uso"] == "COMPATIBLE_CON_RESTRICCION"
+    assert capturado["json"]["detalle_inconsistencias_json"] == ["Discordancia de metraje."]
+    assert "alertas_detectadas" not in capturado["json"]
+    assert repo.listar_auditorias_pmv2() == [dictamen]
