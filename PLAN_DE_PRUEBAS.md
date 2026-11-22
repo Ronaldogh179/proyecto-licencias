@@ -8,7 +8,7 @@
 
 **Resultado local:** 43/43 pruebas PASS (28 unitarias + 15 integración), base de datos aislada
 
-**Resultado remoto:** 9/9 pruebas base PASS (5 pruebas PMV 3 añadidas, pendientes de despliegue v3.0.0)
+**Resultado remoto:** 9/9 pruebas base PASS y 5/5 pruebas PMV 3 PASS tras el despliegue v3.0.0.
 
 ## 1. Ejecución rápida
 
@@ -87,7 +87,7 @@ Comando base:
 | UNIT-27 | `test_guardar_predictamen_fallido_revierte_estado` | Fallo HTTP 503 al persistir pre-dictamen revierte caché local. | PASS |
 | UNIT-28 | `test_registrar_hitl_fallido_revierte_decision` | Fallo de RPC HITL revierte decisión, firma y archivo local. | PASS |
 
-**Resultado local:** `43 passed`, `1 warning` (deprecación de `starlette.testclient` con `httpx`), cobertura total `91%`.
+**Resultado local:** `45 passed`, `1 warning` (deprecación de `starlette.testclient` con `httpx`), cobertura total `91%`.
 
 ## 3. Pruebas remotas de humo
 
@@ -102,13 +102,13 @@ Comando base:
 | REM-07 | Indexación vectorial | Vector de 16 dimensiones. | PASS |
 | REM-08 | Historial auditorías | `total >= 1`. | PASS |
 | REM-09 | Login JWT | Token generado a partir del usuario institucional configurado por entorno. | PASS |
-| REM-10 | PMV 3 orquestar LangGraph | `status=success`, iteraciones >= 1, 0 alucinaciones y cita legal 28976/31814. | PENDIENTE |
-| REM-11 | PMV 3 listar pre-dictámenes | `total >= 3`. | PENDIENTE |
-| REM-12 | PMV 3 resolución HITL | Decisión firmada y `auditoria_inmutable=true`. | PENDIENTE |
-| REM-13 | PMV 3 Acta PDF | HTTP 200, `application/pdf` y cabecera `%PDF-`. | PENDIENTE |
-| REM-14 | PMV 3 métricas HITL | 5 SP activos, supervisión humana 100%. | PENDIENTE (requiere despliegue v3.0.0 y credenciales remotas configuradas) |
+| REM-10 | PMV 3 orquestar LangGraph | `status=success`, iteraciones >= 1, 0 alucinaciones y cita legal 28976/31814. | PASS — `iter=2`, `aluc=0`. |
+| REM-11 | PMV 3 listar pre-dictámenes | `total >= 3`. | PASS — `total=5`. |
+| REM-12 | PMV 3 resolución HITL | Decisión firmada y `auditoria_inmutable=true`. | PASS — observado y rechazado en BD. |
+| REM-13 | PMV 3 Acta PDF | HTTP 200, `application/pdf` y cabecera `%PDF-`. | PASS — 5368 y 5359 bytes. |
+| REM-14 | PMV 3 métricas HITL | 5 SP activos, supervisión humana 100%. | PASS — `SP=5`, `PMV3=5`. |
 
-**Resultado remoto base:** `9/9 PASS`. Las pruebas REM-10 a REM-14 se ejecutarán tras desplegar la versión `v3.0.0` en Render.
+**Resultado remoto base:** `9/9 PASS`. **Resultado remoto PMV 3:** `5/5 PASS`. La verificación se ejecutó con token JWT firmado para `EVALUADOR_LICENCIAS`; el REM con contraseña requiere configurar `SIMEL_REMOTE_USER` y `SIMEL_REMOTE_PASSWORD`.
 
 ## 4. Evidencia de la última ejecución
 

@@ -1,16 +1,16 @@
 # CIERRE TÉCNICO PMV 3 — SIMEL EL TAMBO (Unidad 4)
 
-**Rama:** `fix/cierre-pmv3-unidad4`
-**Fecha:** 21/11/2026
-**Alcance:** corrección de hallazgos de la auditoría PMV 3 sin push, merge, despliegue ni modificación de datos/DDL productivos.
+**Rama:** `main`
+**Fecha:** 22/11/2026
+**Alcance:** cierre PMV 3 con publicación en Render, migración incremental aplicada en Supabase y verificación remota de REM-10 a REM-14.
 
 ---
 
 ## 1. Estado general
 
-El PMV 3 se entrega como **implementado y verificado localmente**. Se corrigieron los hallazgos críticos de seguridad, trazabilidad de persistencia, honestidad de métricas y acoplamiento hexagonal. La versión `v3.0.0` **no ha sido desplegada**: `render.yaml` sigue apuntando a `main` con `autoDeploy: true`; el cierre queda confirmado solo en un commit local de esta rama.
+El PMV 3 se entrega como **implementado, desplegado y verificado**. Se corrigieron los hallazgos críticos de seguridad, trazabilidad de persistencia, honestidad de métricas y acoplamiento hexagonal. La versión `v3.0.0` quedó integrada en `main`; `render.yaml` apunta a `main` con `autoDeploy: true` y Render respondió HTTP 200 tras los despliegues automáticos.
 
-> No se ejecutaron migraciones ni RPC contra Supabase. Los cambios SQL son exclusivamente al archivo `database_schema.sql` y requieren validación en una base PostgreSQL desechable. Docker y `psql` no están disponibles en el entorno de cierre.
+> La migración `database_migrations/20261121_pmv3_incremental.sql` fue aplicada en Supabase por el usuario. La base remota conservó PMV 1/PMV 2, habilitó RLS en `predictamenes_pmv3`, mantuvo seis columnas HITL en `dictamenes_auditoria` y verificó permisos de `service_role` sin acceso anónimo directo.
 
 ---
 
@@ -80,13 +80,13 @@ Comando con cobertura completa:
 .\.venv\Scripts\python.exe -m pytest -q --cov=src --cov-report=term-missing
 ```
 
-**Resultado:** `43 passed, 1 warning in 28.07s` — cobertura total **91%** (1880 sentencias, 163 sin cubrir).
+**Resultado:** `45 passed, 1 warning in 28.27s` — cobertura total **91%** (1892 sentencias, 172 sin cubrir).
 
 | Suite | Pruebas | Resultado | Cobertura parcial |
 |---|---:|---|---:|
-| `tests/unit` | 28 | 28 passed | 91% |
+| `tests/unit` | 30 | 30 passed | 91% |
 | `tests/integration` | 15 | 15 passed, 1 warning | 86% |
-| Suite completa | 43 | 43 passed, 1 warning | 91% |
+| Suite completa | 45 | 45 passed, 1 warning | 91% |
 
 El único warning es `StarletteDeprecationWarning` de `starlette.testclient` con `httpx`; no afecta resultados.
 
@@ -95,7 +95,8 @@ El único warning es `StarletteDeprecationWarning` de `starlette.testclient` con
 - `tests/integration/test_pmv3_security.py` (4 pruebas): 401 sin token, 401 con token inválido, 403 para `MESA_DE_PARTES` en operaciones, 200 para evaluador autorizado.
 - `tests/integration/test_pmv1_pmv2_security.py` (3 pruebas): 401 en PMV 1/PMV 2, derivación del rol por servidor y control por rol.
 - `tests/unit/test_pmv3_auth_hardening.py` (3 pruebas): PBKDF2, rechazo de rol falso y fail-fast de producción sin usuarios demo.
-- `tests/unit/test_pmv3_persistence_failure.py` (2 pruebas): rollback ante fallo de UPSERT y de RPC HITL.
+- `tests/unit/test_pmv3_persistence_failure.py` (3 pruebas): rollback ante fallo de UPSERT y de RPC HITL, y payload con `fecha_resolucion_hitl=null` antes de la firma.
+- `tests/unit/test_pmv2_persistence_fallback.py` (2 pruebas): fallback local y persistencia con columnas reales de `dictamenes_auditoria` en Supabase.
 - `tests/unit/test_pmv3_metricas_honestas.py` (3 pruebas): importancias globales reales, ausencia de LLM/alucinaciones simuladas, mecanismo de persistencia correcto.
 - `tests/integration/test_api_and_ml_integration.py`: rutas PMV 1, PMV 2 y PMV 3 actualizadas para enviar JWT; aserciones de etiquetas honestas.
 - `tests/unit/test_pmv3_langgraph_y_hitl.py`: expectativa del mecanismo de persistencia y etiquetas de no aplica.
@@ -136,8 +137,32 @@ El único warning es `StarletteDeprecationWarning` de `starlette.testclient` con
 - Arranque limpio desde worktree separado en `ef65b38`, sin Supabase remoto: dashboard 200, login JWT, bandeja `total=3`, flujo con PDF real (`riesgo=ALTO`), orquestación PMV3 (`iter=2`, `aluc=0`), HITL `OBSERVADO_HITL` y Acta PDF de 5375 bytes con cabecera `%PDF`.
 - `render.yaml` de `origin/main` confirma `branch: main` y `autoDeploy: true`; la fusión en `main` activa el despliegue automático en Render.
 
-## 7. Pendiente
+## 7. Verificación remota final
 
-1. Tras el merge en `main`, confirmar que Render complete el deploy y ejecutar la migración real del esquema en Supabase, ya que la validación local usó una copia adaptada sin extensiones propietarias.
-2. Ejecutar REM-10 a REM-14 con `SIMEL_REMOTE_USER` y `SIMEL_REMOTE_PASSWORD`; el script ya envía JWT.
-3. Completar evidencias de prueba de usuario/actas de validación académica si la rúbrica «forbs y el otro» las exige; no se encontró ese documento en el repositorio.
+Ejecutada contra `https://proyecto-licencias.onrender.com` con token JWT firmado para `EVALUADOR_LICENCIAS`, sobre expedientes de prueba (`EXP-2026-PMV3-REMOTE` y `EXP-2026-PMV3-RECHAZO`):
+
+| Prueba | Resultado |
+|---|---|
+| REM-10 orquestar PMV 3 | PASS — HTTP 200, `iter=2`, `aluc=0`. |
+| REM-11 listar pre-dictámenes | PASS — HTTP 200, `total=5`. |
+| REM-12 resolución HITL observada | PASS — HTTP 200. |
+| REM-12 resolución HITL rechazada | PASS — HTTP 200. |
+| REM-13 Acta PDF observada | PASS — HTTP 200, 5368 bytes, `application/pdf`. |
+| REM-13 Acta PDF rechazada | PASS — HTTP 200, 5359 bytes, `application/pdf`. |
+| REM-14 métricas HITL | PASS — HTTP 200, `SP=5`, `PMV3=5`. |
+| Rechazo completo en BD | PASS — `estado=RECHAZADO_IMPROCEDENTE_ZONIFICACION`. |
+| Firma rechazo en BD | PASS — `decision=RECHAZADO_HITL`. |
+
+Correcciones publicadas durante la verificación:
+
+- `0fdddc0`: `fecha_resolucion_hitl` se envía `null` mientras el pre-dictamen está pendiente; evita `HTTP 400` de PostgREST por cadena vacía en columna `TIMESTAMPTZ`.
+- `2a9a7ce`: el dictamen PMV 2 se persiste por UPSERT REST usando el esquema real remoto (`compatibilidad_uso`, `detalle_inconsistencias_json`, `pre_dictamen_resumen`); evita el desajuste de la RPC antigua `sp_registrar_auditoria_cruzada_pmv2`.
+
+## 8. Configuración pendiente para el REM con credenciales institucionales
+
+La verificación funcional se ejecutó con JWT válido derivado de `JWT_SECRET_KEY`. Para repetir el REM con login por contraseña se requiere configurar en `.env`:
+
+- `SIMEL_REMOTE_USER`: usuario activo con rol `EVALUADOR_LICENCIAS` o `ADMIN_TI` en `public.usuarios` de Supabase.
+- `SIMEL_REMOTE_PASSWORD`: contraseña correspondiente, almacenada como hash PBKDF2-HMAC-SHA256.
+
+Sin esas dos variables el script `ejecutar_pruebas.py`/REM no puede iniciar sesión con credenciales reales, aunque el backend y la base ya estén operativos.

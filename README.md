@@ -284,12 +284,12 @@ El proyecto incluye pruebas unitarias y de integración:
 
 También se puede ejecutar el plan completo con doble clic en `EJECUTAR_PRUEBAS.bat`, que corre la suite local y las pruebas remotas de humo contra Render. El detalle de casos y resultados está en `PLAN_DE_PRUEBAS.md`.
 
-Resultado verificado en la rama `fix/cierre-pmv3-unidad4`:
+Resultado verificado en `main`:
 
-- 43 pruebas locales aprobadas (28 unitarias + 15 de integración), ejecutadas con base de datos aislada.
+- 45 pruebas locales aprobadas (30 unitarias + 15 de integración), ejecutadas con base de datos aislada.
 - Cobertura total: 91% (`pytest --cov=src`).
-- 9 pruebas remotas base aprobadas y 5 pruebas PMV 3 pendientes de despliegue v3.0.0.
-- Evidencias en `resultados/`; detalle en `CIERRE_TECNICO_PMV3.md`.
+- 9 pruebas remotas base aprobadas y 5 pruebas PMV 3 aprobadas tras el despliegue v3.0.0.
+- Detalle y resultados finales en `CIERRE_TECNICO_PMV3.md` y `PLAN_DE_PRUEBAS.md`.
 
 ## 6. Endpoints Principales
 
@@ -319,7 +319,7 @@ Resultado verificado en la rama `fix/cierre-pmv3-unidad4`:
 - Todas las operaciones de negocio PMV 1, PMV 2 y PMV 3 exigen JWT Bearer; las operaciones de escritura requieren `EVALUADOR_LICENCIAS` o `ADMIN_TI` y las consultas permiten también a `MESA_DE_PARTES`.
 - En staging/producción los funcionarios se leen de `usuarios` en Supabase; los usuarios demo solo existen en desarrollo/pruebas. Las contraseñas se verifican con PBKDF2-HMAC-SHA256.
 - Si falla la persistencia PMV 3 en Supabase, la API responde `503`, revierte el estado local y no confirma la decisión HITL.
-- `database_schema.sql` declara grants para `service_role`, `authenticated` y `anon`; su ejecución en una base PostgreSQL desechable queda pendiente en entornos sin Docker/psql.
+- `database_migrations/20261121_pmv3_incremental.sql` fue aplicado en Supabase y verificado: RLS activo, seis columnas HITL en `dictamenes_auditoria`, permisos de `service_role` y sin acceso directo anónimo.
 - En el PMV 3, la IA solo recomienda: la decisión final y la firma son siempre del funcionario evaluador (Ley N.° 31814).
 - El motor multiagente es determinista y no usa LLM generativo; "temperatura 0.1" y "0 alucinaciones" se reportan como marcas de configuración/no aplica, no como métricas medidas.
 - La importancia de variables es global (`feature_importance` de XGBoost), no una explicación local por instancia; `context_precision_rag` es una heurística experimental derivada de la similitud coseno.
