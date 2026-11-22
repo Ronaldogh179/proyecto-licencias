@@ -43,6 +43,8 @@ router = APIRouter(prefix="/api/v1", tags=["PMV 1 - Evaluacion y Fiscalizacion d
 
 ROLES_OPERACION_PMV3 = (ROL_EVALUADOR, ROL_ADMIN_TI)
 ROLES_CONSULTA_PMV3 = (ROL_EVALUADOR, ROL_MESA_PARTES, ROL_ADMIN_TI)
+MAX_PDF_BYTES = 25 * 1024 * 1024
+MODOS_INDICADORES = {"automatico", "manual"}
 
 class LoginRequest(BaseModel):
     correo: str
@@ -75,13 +77,49 @@ async def evaluar_expediente_pmv1(
     documentos_faltantes: Optional[int] = Form(None),
     inconsistencias_detectadas: Optional[int] = Form(None),
     documento_critico_faltante: Optional[int] = Form(None),
+    modo_indicadores: str = Form("manual"),
     algoritmo: str = Form("xgboost"),
     archivo_pdf: Optional[UploadFile] = File(None),
 ):
     try:
+        modo = str(modo_indicadores or "manual").strip().lower()
+        if modo not in MODOS_INDICADORES:
+            raise ValueError(
+                "modo_indicadores debe ser 'automatico' o 'manual'."
+            )
+
+        if modo == "automatico":
+            documentos_faltantes = None
+            inconsistencias_detectadas = None
+            documento_critico_faltante = None
+        else:
+            for nombre, valor in (
+                ("documentos_faltantes", documentos_faltantes),
+                ("inconsistencias_detectadas", inconsistencias_detectadas),
+            ):
+                if valor is not None and not 0 <= int(valor) <= 3:
+                    raise ValueError(f"{nombre} debe estar entre 0 y 3.")
+            if documento_critico_faltante is not None and int(
+                documento_critico_faltante
+            ) not in (0, 1):
+                raise ValueError("documento_critico_faltante debe ser 0 o 1.")
+
         container = obtener_container(request)
-        pdf_bytes = await archivo_pdf.read() if archivo_pdf else b""
-        nombre_pdf = archivo_pdf.filename if archivo_pdf and archivo_pdf.filename else f"{codigo_expediente.lower()}.pdf"
+        pdf_bytes = b""
+        if archivo_pdf is not None:
+            pdf_bytes = await archivo_pdf.read()
+            if not pdf_bytes:
+                raise ValueError("El archivo PDF está vacío. Seleccione un documento válido.")
+            if len(pdf_bytes) > MAX_PDF_BYTES:
+                raise HTTPException(
+                    status_code=413,
+                    detail="El archivo PDF supera el tamaño máximo permitido de 25 MB.",
+                )
+        nombre_pdf = (
+            archivo_pdf.filename
+            if archivo_pdf and archivo_pdf.filename
+            else f"{codigo_expediente.lower()}.pdf"
+        )
 
         dto = IngresoExpedienteInputDTO(
             codigo_expediente=codigo_expediente,
@@ -105,7 +143,7 @@ async def evaluar_expediente_pmv1(
             else container.procesar_xgb_use_case
         )
         expediente = use_case.ejecutar_flujo_pmv1(dto)
-        return {"status": "created", "expediente": asdict(expediente)}
+        return {"status": "created", "expediente": _serializar_expediente(expediente)}
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))
 
@@ -121,7 +159,10 @@ def listar_bandeja_priorizada(request: Request):
         "status": "ok",
         "total": len(lista),
         "metricas_modelos_poc": container.entrenador_ml.metricas_poc,
-        "expedientes": [asdict(e) for e in lista],
+        "expedientes": [
+            _serializar_expediente(expediente, incluir_texto_completo=False)
+            for expediente in lista
+        ],
     }
 
 
@@ -164,6 +205,13 @@ class AuditarExpedienteRagRequest(BaseModel):
 
 class CargaMasivaRequest(BaseModel):
     cantidad: int = 600
+
+
+def _serializar_expediente(expediente, incluir_texto_completo: bool = True) -> Dict[str, Any]:
+    datos = asdict(expediente)
+    if not incluir_texto_completo:
+        datos.pop("texto_extraido_completo", None)
+    return datos
 
 
 def _mapear_compatibilidad_zonificacion(valor: str) -> str:

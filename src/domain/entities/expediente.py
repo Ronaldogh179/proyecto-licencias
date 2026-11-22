@@ -1,6 +1,6 @@
 ﻿from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import Dict, Optional
+from typing import Any, Dict, Optional
 from src.domain.value_objects.nivel_riesgo import NivelRiesgoEnum
 
 @dataclass
@@ -27,8 +27,10 @@ class Expediente:
     inconsistencias_detectadas: int = 0
     documento_critico_faltante: int = 0
     texto_extraido_resumen: str = ""
+    texto_extraido_completo: str = ""
     confianza_ocr: float = 0.0
     tiempo_ocr_seg: float = 0.0
+    metadatos_ocr: Dict[str, Any] = field(default_factory=dict)
     estado_tramite: str = "INGRESADO"
     dias_habiles_transcurridos: int = 1
     plazo_maximo_sla_dias: int = 8
@@ -43,6 +45,8 @@ class Expediente:
         texto_resumen: str,
         confianza: float,
         tiempo_seg: float,
+        texto_completo: str = "",
+        metadatos: Optional[Dict[str, Any]] = None,
     ) -> None:
         if not (0 <= faltantes <= 3):
             raise ValueError("documentos_faltantes debe estar entre 0 y 3.")
@@ -55,8 +59,10 @@ class Expediente:
         self.inconsistencias_detectadas = inconsistencias
         self.documento_critico_faltante = critico
         self.texto_extraido_resumen = texto_resumen
+        self.texto_extraido_completo = texto_completo or texto_resumen
         self.confianza_ocr = round(confianza, 2)
         self.tiempo_ocr_seg = round(tiempo_seg, 3)
+        self.metadatos_ocr = dict(metadatos or {})
         self.estado_tramite = "EXTRAIDO_OCR"
 
     def asignar_prediccion_riesgo(

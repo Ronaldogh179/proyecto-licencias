@@ -116,9 +116,9 @@
         <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
       </button>
       <div id="userBadge" class="bg-slate-800 border border-slate-700 px-4 py-2 rounded-lg text-right">
-        <p class="text-xs text-emerald-400 font-semibold" id="jwtStatus">● Sesión JWT Activa (TLS 1.3 / AES-256)</p>
-        <p class="text-sm font-bold" id="userName">Ing. Simon Ronaldo Gonzales Jacinto</p>
-        <p class="text-xs text-slate-400" id="userRole">Rol: EVALUADOR_LICENCIAS</p>
+        <p class="text-xs text-amber-300 font-semibold" id="jwtStatus">● Sin sesión: autentíquese para operar</p>
+        <p class="text-sm font-bold" id="userName">Sin autenticar</p>
+        <p class="text-xs text-slate-400" id="userRole">Rol: --</p>
         <p class="text-[11px] text-amber-300 font-mono mt-1 break-all" id="currentDomainInline">window.location.origin</p>
       </div>
     </div>
@@ -229,13 +229,25 @@
             </div>
           </div>
 
+          <!-- Modo de indicadores documentales: automático por OCR o manual del evaluador -->
+          <div class="p-3.5 bg-blue-50 rounded-xl border border-blue-200 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <label for="modoIndicadores" class="block text-xs font-bold text-slate-800">Modo de indicadores documentales</label>
+              <p class="text-[11px] text-slate-600">Automático estima los indicadores desde el PDF; manual respeta los valores elegidos por el evaluador.</p>
+            </div>
+            <select id="modoIndicadores" name="modo_indicadores" class="border-2 border-blue-300 rounded-lg px-3 py-2 text-sm bg-white font-semibold text-blue-900">
+              <option value="automatico" selected>Automático (estimar desde el PDF)</option>
+              <option value="manual">Manual (usar mis valores)</option>
+            </select>
+          </div>
+
           <!-- Parámetros extraídos por OCR / Simulación de auditoría documental -->
           <div class="p-3.5 bg-slate-50 rounded-xl border border-slate-200">
             <p class="text-xs font-bold text-slate-700 uppercase mb-2">Variables Documentales Detectadas por Motor PyMuPDF + Tesseract OCR (HU03)</p>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
               <div>
                 <label class="block text-xs text-slate-600">Documentos Faltantes (0 a 3)</label>
-                <select name="documentos_faltantes" class="w-full border rounded px-2 py-1.5 text-sm mt-1">
+                <select name="documentos_faltantes" data-manual-indicador disabled class="w-full border rounded px-2 py-1.5 text-sm mt-1 disabled:bg-slate-100 disabled:text-slate-400">
                   <option value="2" selected>2 documentos faltantes</option>
                   <option value="0">0 (Expediente completo)</option>
                   <option value="1">1 documento faltante</option>
@@ -244,7 +256,7 @@
               </div>
               <div>
                 <label class="block text-xs text-slate-600">Inconsistencias Detectadas (0 a 3)</label>
-                <select name="inconsistencias_detectadas" class="w-full border rounded px-2 py-1.5 text-sm mt-1">
+                <select name="inconsistencias_detectadas" data-manual-indicador disabled class="w-full border rounded px-2 py-1.5 text-sm mt-1 disabled:bg-slate-100 disabled:text-slate-400">
                   <option value="1" selected>1 inconsistencia detectada</option>
                   <option value="0">0 inconsistencias</option>
                   <option value="2">2 inconsistencias</option>
@@ -253,7 +265,7 @@
               </div>
               <div>
                 <label class="block text-xs text-slate-600">¿Falta Documento Crítico? (ITSE/Plano)</label>
-                <select name="documento_critico_faltante" class="w-full border rounded px-2 py-1.5 text-sm mt-1 font-semibold text-red-700">
+                <select name="documento_critico_faltante" data-manual-indicador disabled class="w-full border rounded px-2 py-1.5 text-sm mt-1 font-semibold text-red-700 disabled:bg-slate-100 disabled:text-slate-400">
                   <option value="1" selected>1 — SÍ (Falta Requisito Crítico)</option>
                   <option value="0">0 — NO (Requisitos Críticos OK)</option>
                 </select>
@@ -263,13 +275,14 @@
 
           <div class="flex flex-wrap items-center justify-between gap-4 pt-2">
             <div>
-              <label class="block text-xs font-bold text-slate-700">Adjuntar Expediente PDF Escaneado (Opcional)</label>
-              <input type="file" name="archivo_pdf" accept=".pdf" class="text-xs mt-1" />
+              <label for="archivoPdf" class="block text-xs font-bold text-slate-700">Adjuntar Expediente PDF Escaneado (Opcional)</label>
+              <input id="archivoPdf" type="file" name="archivo_pdf" accept=".pdf,application/pdf" class="text-xs mt-1" />
             </div>
-            <button type="submit" class="bg-blue-700 hover:bg-blue-800 text-white font-bold px-6 py-2.5 rounded-xl shadow">
+            <button id="btnEvalOcr" type="submit" class="bg-blue-700 hover:bg-blue-800 disabled:bg-blue-400 disabled:cursor-not-allowed text-white font-bold px-6 py-2.5 rounded-xl shadow">
               Ejecutar OCR + Predecir Riesgo (XGBoost)
             </button>
           </div>
+          <div id="evalFeedback" class="hidden rounded-lg border-2 px-3 py-2 text-xs font-semibold" role="status" aria-live="polite"></div>
         </form>
       </section>
 
@@ -277,39 +290,42 @@
       <section id="modulo-prediccion" class="lg:col-span-5 bg-white rounded-xl shadow p-6 border border-slate-200 flex flex-col justify-between">
         <div>
           <h2 class="text-base font-bold text-slate-900 uppercase border-b pb-2">3. Clasificación Predictiva de Riesgo (PMV1-4-HU04)</h2>
-          <div id="resultadoMLBox" class="mt-4 space-y-4">
-            <div class="p-4 rounded-xl bg-red-50 border-2 border-red-500 text-center" id="riesgoBanner">
-              <span class="text-xs font-bold uppercase tracking-wider px-2.5 py-0.5 rounded bg-red-600 text-white" id="riesgoNivelBadge">RIESGO ALTO • PRIORIDAD 1</span>
-              <p class="text-4xl font-black text-red-700 mt-2" id="riesgoProbTxt">94.2%</p>
-              <p class="text-xs font-semibold text-slate-700 mt-1" id="riesgoClaseTxt">Predicción Supervisada: EXPEDIENTE OBSERVABLE (Clase 1)</p>
+          <div id="resultadoMLPlaceholder" class="mt-4 rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 p-6 text-center">
+            <p class="text-sm font-bold text-slate-700">Sin evaluación ejecutada</p>
+            <p class="mt-1 text-xs text-slate-500">Adjunte el expediente PDF y pulse «Ejecutar OCR + Predecir Riesgo» para obtener resultados reales del documento.</p>
+          </div>
+
+          <div id="resultadoMLContenido" class="mt-4 space-y-4 hidden">
+            <div class="p-4 rounded-xl bg-slate-50 border-2 border-slate-300 text-center" id="riesgoBanner">
+              <span class="text-xs font-bold uppercase tracking-wider px-2.5 py-0.5 rounded bg-slate-600 text-white" id="riesgoNivelBadge">SIN PROCESAR</span>
+              <p class="text-4xl font-black text-slate-700 mt-2" id="riesgoProbTxt">--</p>
+              <p class="text-xs font-semibold text-slate-700 mt-1" id="riesgoClaseTxt">Sin datos de evaluación</p>
             </div>
 
             <div class="text-xs space-y-1.5 bg-slate-50 p-3.5 rounded-lg border">
-              <p><strong>Algoritmo Ejecutado:</strong> <span id="mlAlgoritmo">XGBoostClassifier (F1=0.925 | Recall=96.9%)</span></p>
-              <p><strong>Resumen Extracción OCR:</strong> <span id="ocrResumen">Formulario TUPA procesado con PyMuPDF + Tesseract (Confianza: 96.4%)</span></p>
-              <p><strong>Latencia Inferencia IA:</strong> <span id="mlLatencia" class="text-emerald-700 font-bold">1.18 ms (Cumple RNF01 &lt; 3 s)</span></p>
+              <p><strong>Archivo procesado:</strong> <span id="ocrArchivo">--</span></p>
+              <p><strong>Expediente procesado:</strong> <span id="ocrExpediente">--</span></p>
+              <p><strong>Algoritmo Ejecutado:</strong> <span id="mlAlgoritmo">--</span></p>
+              <p><strong>Resumen Extracción OCR:</strong> <span id="ocrResumen">--</span></p>
+              <p><strong>Confianza OCR / extracción:</strong> <span id="ocrConfianza">--</span></p>
+              <p><strong>Páginas / OCR aplicado:</strong> <span id="ocrPaginas">--</span></p>
+              <p><strong>Latencia Inferencia IA:</strong> <span id="mlLatencia" class="text-emerald-700 font-bold">--</span></p>
+            </div>
+
+            <div id="avisoEstimacion" class="hidden rounded-lg border-2 border-amber-400 bg-amber-50 px-3 py-2 text-[11px] font-semibold text-amber-950">
+              Los indicadores documentales fueron estimados automáticamente a partir del PDF y requieren revisión del evaluador.
             </div>
 
             <div>
-              <p class="text-xs font-bold uppercase text-slate-600 mb-2">Explicabilidad Local (Importancia de Variables en la Decisión)</p>
-              <div class="space-y-2 text-xs">
-                <div>
-                  <div class="flex justify-between"><span>Documento Crítico Faltante (X5)</span><span class="font-bold">46%</span></div>
-                  <div class="w-full bg-slate-200 h-2 rounded"><div class="bg-red-600 h-2 rounded" style="width:46%"></div></div>
-                </div>
-                <div>
-                  <div class="flex justify-between"><span>Cantidad de Documentos Faltantes (X3)</span><span class="font-bold">29%</span></div>
-                  <div class="w-full bg-slate-200 h-2 rounded"><div class="bg-amber-500 h-2 rounded" style="width:29%"></div></div>
-                </div>
-                <div>
-                  <div class="flex justify-between"><span>Inconsistencias Detectadas (X4)</span><span class="font-bold">16%</span></div>
-                  <div class="w-full bg-slate-200 h-2 rounded"><div class="bg-blue-600 h-2 rounded" style="width:16%"></div></div>
-                </div>
-                <div>
-                  <div class="flex justify-between"><span>Giro Comercial y Tipo de Trámite (X1, X2)</span><span class="font-bold">9%</span></div>
-                  <div class="w-full bg-slate-200 h-2 rounded"><div class="bg-slate-600 h-2 rounded" style="width:9%"></div></div>
-                </div>
+              <p class="text-xs font-bold uppercase text-slate-600 mb-2">Importancia de variables del modelo (global)</p>
+              <div id="importanciaVariables" class="space-y-2 text-xs">
+                <p class="text-slate-500">Sin datos de importancia.</p>
               </div>
+            </div>
+
+            <div>
+              <p class="text-xs font-bold uppercase text-slate-600 mb-2">Texto extraído del PDF</p>
+              <pre id="ocrTextoExtraido" class="max-h-48 overflow-auto whitespace-pre-wrap break-words rounded-lg border bg-slate-50 p-3 text-[11px] leading-relaxed text-slate-800">--</pre>
             </div>
           </div>
         </div>
@@ -844,6 +860,145 @@
       return Number(value || 0).toFixed(digits);
     }
 
+    const ETIQUETAS_IMPORTANCIA = {
+      documentos_faltantes: 'Documentos Faltantes (X3)',
+      inconsistencias_detectadas: 'Inconsistencias Detectadas (X4)',
+      documento_critico_faltante: 'Documento Crítico Faltante (X5)',
+      giro_comercial: 'Giro Comercial (X1)',
+      tipo_tramite: 'Tipo de Trámite (X2)'
+    };
+
+    function etiquetaImportancia(clave) {
+      if (ETIQUETAS_IMPORTANCIA[clave]) return ETIQUETAS_IMPORTANCIA[clave];
+      if (clave.startsWith('giro_comercial_')) return 'Giro: ' + clave.slice('giro_comercial_'.length);
+      if (clave.startsWith('tipo_tramite_')) return 'Trámite: ' + clave.slice('tipo_tramite_'.length);
+      return clave.replace(/_/g, ' ');
+    }
+
+    function mostrarFeedbackEval(tipo, mensaje) {
+      const box = document.getElementById('evalFeedback');
+      if (!box) return;
+      const estilos = {
+        info: 'bg-slate-100 border-slate-400 text-slate-800',
+        ok: 'bg-emerald-50 border-emerald-600 text-emerald-950',
+        error: 'bg-red-50 border-red-600 text-red-950'
+      };
+      box.className = 'rounded-lg border-2 px-3 py-2 text-xs font-semibold ' + (estilos[tipo] || estilos.info);
+      box.innerText = mensaje;
+      box.classList.remove('hidden');
+    }
+
+    function limpiarFeedbackEval() {
+      const box = document.getElementById('evalFeedback');
+      if (!box) return;
+      box.classList.add('hidden');
+      box.innerText = '';
+    }
+
+    function detalleErrorApi(json, fallback) {
+      const detalle = json && json.detail;
+      if (typeof detalle === 'string' && detalle.trim()) return detalle;
+      if (Array.isArray(detalle)) {
+        const partes = detalle.map((item) => item && (item.msg || item.message) ? (item.msg || item.message) : JSON.stringify(item));
+        if (partes.length) return partes.join('; ');
+      }
+      if (detalle) return JSON.stringify(detalle);
+      return fallback;
+    }
+
+    function actualizarEstadoSesion(mensaje, activa) {
+      const status = document.getElementById('jwtStatus');
+      if (status) {
+        status.innerText = mensaje;
+        status.className = activa
+          ? 'text-xs text-emerald-400 font-semibold'
+          : 'text-xs text-amber-300 font-semibold';
+      }
+      if (!activa) {
+        const nombre = document.getElementById('userName');
+        const rol = document.getElementById('userRole');
+        if (nombre) nombre.innerText = 'Sin autenticar';
+        if (rol) rol.innerText = 'Rol: --';
+      }
+    }
+
+    function renderResultadoEvaluacion(expediente, nombreArchivo) {
+      if (!expediente || !expediente.evaluacion_riesgo) {
+        throw new Error('La API no devolvió una evaluación de riesgo válida.');
+      }
+      const riesgo = expediente.evaluacion_riesgo;
+      const metadatos = expediente.metadatos_ocr || {};
+      const probabilidad = Number(riesgo.probabilidad_riesgo || 0);
+
+      document.getElementById('resultadoMLPlaceholder').classList.add('hidden');
+      document.getElementById('resultadoMLContenido').classList.remove('hidden');
+
+      const banner = document.getElementById('riesgoBanner');
+      const probabilidadEl = document.getElementById('riesgoProbTxt');
+      probabilidadEl.innerText = (probabilidad * 100).toFixed(1) + '%';
+      document.getElementById('riesgoNivelBadge').innerText =
+        'RIESGO ' + riesgo.nivel_riesgo + ' · PRIORIDAD ' + (riesgo.nivel_riesgo === 'ALTO' ? '1' : riesgo.nivel_riesgo === 'MEDIO' ? '2' : '3');
+      document.getElementById('riesgoClaseTxt').innerText = riesgo.resultado_observacion === 1
+        ? 'Predicción Supervisada: EXPEDIENTE OBSERVABLE (Clase 1)'
+        : 'Predicción Supervisada: EXPEDIENTE CONFORME (Clase 0)';
+
+      if (riesgo.nivel_riesgo === 'ALTO') {
+        banner.className = 'p-4 rounded-xl bg-red-50 border-2 border-red-500 text-center';
+        probabilidadEl.className = 'text-4xl font-black text-red-700 mt-2';
+      } else if (riesgo.nivel_riesgo === 'MEDIO') {
+        banner.className = 'p-4 rounded-xl bg-amber-50 border-2 border-amber-500 text-center';
+        probabilidadEl.className = 'text-4xl font-black text-amber-700 mt-2';
+      } else {
+        banner.className = 'p-4 rounded-xl bg-emerald-50 border-2 border-emerald-500 text-center';
+        probabilidadEl.className = 'text-4xl font-black text-emerald-700 mt-2';
+      }
+
+      document.getElementById('ocrArchivo').innerText =
+        expediente.nombre_archivo_pdf || nombreArchivo || '--';
+      document.getElementById('ocrExpediente').innerText = expediente.codigo_expediente || '--';
+      document.getElementById('mlAlgoritmo').innerText = riesgo.algoritmo_empleado || '--';
+      document.getElementById('ocrResumen').innerText = expediente.texto_extraido_resumen || '--';
+      document.getElementById('ocrConfianza').innerText =
+        Number(expediente.confianza_ocr || 0).toFixed(1) + ' % (' + (metadatos.tipo_extraccion || 'sin dato') + ')';
+      document.getElementById('ocrPaginas').innerText =
+        `${metadatos.paginas_totales ?? '--'} total · ${metadatos.paginas_texto_digital ?? 0} digital(es) · ${metadatos.paginas_ocr ?? 0} OCR`;
+      document.getElementById('mlLatencia').innerText =
+        fmtNum(riesgo.latencia_inferencia_ms, 2) + ' ms' +
+        (Number(riesgo.latencia_inferencia_ms) < 3000 ? ' (Cumple RNF01 < 3 s)' : ' (Excede RNF01)');
+      document.getElementById('ocrTextoExtraido').innerText =
+        expediente.texto_extraido_completo || expediente.texto_extraido_resumen || '--';
+
+      const aviso = document.getElementById('avisoEstimacion');
+      const modo = metadatos.modo_indicadores || 'manual';
+      if (modo === 'automatico' || modo === 'mixto') {
+        aviso.classList.remove('hidden');
+        const estimados = (metadatos.indicadores_estimados || []).map(etiquetaImportancia).join(', ');
+        aviso.innerText = 'Indicadores estimados automáticamente a partir del PDF y sujetos a revisión del evaluador' +
+          (estimados ? ': ' + estimados + '.' : '.');
+      } else {
+        aviso.classList.add('hidden');
+      }
+
+      const importancias = riesgo.importancia_variables || {};
+      const entradas = Object.entries(importancias)
+        .map(([clave, valor]) => [clave, Number(valor) || 0])
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 6);
+      const contenedor = document.getElementById('importanciaVariables');
+      if (!entradas.length) {
+        contenedor.innerHTML = '<p class="text-slate-500">La API no devolvió importancias de variables.</p>';
+      } else {
+        const colores = ['bg-red-600', 'bg-amber-500', 'bg-blue-600', 'bg-slate-600', 'bg-emerald-600', 'bg-sky-600'];
+        contenedor.innerHTML = entradas.map(([clave, valor], indice) => {
+          const porcentaje = Math.max(0, Math.min(100, valor * 100));
+          return `<div>
+            <div class="flex justify-between gap-2"><span>${escapeHtml(etiquetaImportancia(clave))}</span><span class="font-bold">${porcentaje.toFixed(1)}%</span></div>
+            <div class="w-full bg-slate-200 h-2 rounded"><div class="${colores[indice % colores.length]} h-2 rounded" style="width:${porcentaje.toFixed(1)}%"></div></div>
+          </div>`;
+        }).join('');
+      }
+    }
+
     function badgeClaseCompatibilidad(valor) {
       if (valor === 'INCOMPATIBLE' || valor === 'NO_COMPATIBLE') {
         return 'bg-red-100 text-red-900 border-red-500';
@@ -1266,63 +1421,150 @@
 
     document.getElementById('loginForm').addEventListener('submit', async (ev) => {
       ev.preventDefault();
-      const res = await fetch('/api/v1/auth/login', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({
-          correo: document.getElementById('loginCorreo').value,
-          password: document.getElementById('loginPass').value,
-          rol: document.getElementById('loginRol').value
-        })
-      });
-      const json = await res.json();
+      const button = ev.target.querySelector('button[type="submit"]');
       const box = document.getElementById('tokenBox');
-      box.classList.remove('hidden');
-      if (res.ok) {
-        sessionStorage.setItem(SIMEL_TOKEN_KEY, json.data.access_token);
-        document.getElementById('userName').innerText = json.data.usuario;
-        document.getElementById('userRole').innerText = 'Rol: ' + json.data.rol;
-        box.innerText = 'TOKEN JWT EMITIDO (HU01): ' + json.data.access_token;
-        await cargarPredictamenesPmv3();
-      } else {
-        sessionStorage.removeItem(SIMEL_TOKEN_KEY);
-        box.innerText = 'ERROR 401: ' + json.detail;
+      const labelOriginal = button ? button.innerText : '';
+      if (button) {
+        button.disabled = true;
+        button.innerText = 'Validando...';
       }
+      try {
+        const res = await fetch('/api/v1/auth/login', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            correo: document.getElementById('loginCorreo').value,
+            password: document.getElementById('loginPass').value,
+            rol: document.getElementById('loginRol').value
+          })
+        });
+        let json = {};
+        try {
+          json = await res.json();
+        } catch (errorJson) {
+          json = {};
+        }
+        box.classList.remove('hidden');
+        if (res.ok) {
+          sessionStorage.setItem(SIMEL_TOKEN_KEY, json.data.access_token);
+          document.getElementById('userName').innerText = json.data.usuario;
+          document.getElementById('userRole').innerText = 'Rol: ' + json.data.rol;
+          actualizarEstadoSesion('● Sesión JWT Activa', true);
+          box.className = 'mt-3 p-2.5 bg-emerald-50 border border-emerald-300 rounded text-xs text-emerald-900 font-mono break-all';
+          box.innerText = 'TOKEN JWT EMITIDO (HU01): ' + json.data.access_token;
+          await cargarPredictamenesPmv3();
+        } else {
+          sessionStorage.removeItem(SIMEL_TOKEN_KEY);
+          actualizarEstadoSesion('● Sesión no válida: revise sus credenciales', false);
+          box.className = 'mt-3 p-2.5 bg-red-50 border border-red-300 rounded text-xs text-red-900 font-mono break-all';
+          box.innerText = 'ERROR ' + res.status + ': ' + detalleErrorApi(json, 'No se pudo autenticar.');
+        }
+      } catch (error) {
+        sessionStorage.removeItem(SIMEL_TOKEN_KEY);
+        actualizarEstadoSesion('● Sin conexión con el servicio de autenticación', false);
+        box.classList.remove('hidden');
+        box.className = 'mt-3 p-2.5 bg-red-50 border border-red-300 rounded text-xs text-red-900 font-mono break-all';
+        box.innerText = 'No se pudo conectar con el servicio de autenticación.';
+      } finally {
+        if (button) {
+          button.disabled = false;
+          button.innerText = labelOriginal;
+        }
+      }
+    });
+
+    let evalEnCurso = false;
+
+    document.getElementById('modoIndicadores').addEventListener('change', (ev) => {
+      const esManual = ev.target.value === 'manual';
+      document.querySelectorAll('[data-manual-indicador]').forEach((select) => {
+        select.disabled = !esManual;
+      });
     });
 
     document.getElementById('evalForm').addEventListener('submit', async (ev) => {
       ev.preventDefault();
-      const formData = new FormData(ev.target);
-      requireSimelToken();
-      const res = await fetch('/api/v1/expedientes/evaluar', { method: 'POST', headers: authHeaders(), body: formData });
-      const json = await res.json();
-      if (res.ok) {
-        const exp = json.expediente;
-        const r = exp.evaluacion_riesgo;
-        const pct = (r.probabilidad_riesgo * 100).toFixed(1) + '%';
-        document.getElementById('riesgoProbTxt').innerText = pct;
-        document.getElementById('riesgoNivelBadge').innerText = 'RIESGO ' + r.nivel_riesgo;
-        document.getElementById('riesgoClaseTxt').innerText = r.resultado_observacion === 1
-          ? 'Predicción Supervisada: EXPEDIENTE OBSERVABLE (Clase 1)'
-          : 'Predicción Supervisada: EXPEDIENTE CONFORME (Clase 0)';
-        document.getElementById('mlAlgoritmo').innerText = r.algoritmo_empleado;
-        document.getElementById('ocrResumen').innerText = exp.texto_extraido_resumen + ' (Confianza: ' + exp.confianza_ocr + '%)';
-        document.getElementById('mlLatencia').innerText = r.latencia_inferencia_ms + ' ms (Cumple RNF01 < 3 s)';
+      if (evalEnCurso) return;
 
-        const banner = document.getElementById('riesgoBanner');
-        if (r.nivel_riesgo === 'ALTO') {
-          banner.className = 'p-4 rounded-xl bg-red-50 border-2 border-red-500 text-center';
-          document.getElementById('riesgoProbTxt').className = 'text-4xl font-black text-red-700 mt-2';
-        } else if (r.nivel_riesgo === 'MEDIO') {
-          banner.className = 'p-4 rounded-xl bg-amber-50 border-2 border-amber-500 text-center';
-          document.getElementById('riesgoProbTxt').className = 'text-4xl font-black text-amber-700 mt-2';
-        } else {
-          banner.className = 'p-4 rounded-xl bg-emerald-50 border-2 border-emerald-500 text-center';
-          document.getElementById('riesgoProbTxt').className = 'text-4xl font-black text-emerald-700 mt-2';
+      const form = ev.currentTarget;
+      const button = document.getElementById('btnEvalOcr');
+      const fileInput = document.getElementById('archivoPdf');
+      const labelOriginal = 'Ejecutar OCR + Predecir Riesgo (XGBoost)';
+      const modo = document.getElementById('modoIndicadores').value;
+      limpiarFeedbackEval();
+
+      if (!getSimelToken()) {
+        actualizarEstadoSesion('● Sin sesión: autentíquese para operar', false);
+        mostrarFeedbackEval('error', 'Sesión requerida: inicie sesión con un funcionario autorizado antes de procesar el expediente.');
+        document.getElementById('modulo-auth').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+
+      if (fileInput.files.length && fileInput.files[0].size === 0) {
+        mostrarFeedbackEval('error', 'El archivo PDF está vacío. Seleccione un documento válido.');
+        return;
+      }
+
+      const formData = new FormData(form);
+      if (modo === 'automatico') {
+        formData.delete('documentos_faltantes');
+        formData.delete('inconsistencias_detectadas');
+        formData.delete('documento_critico_faltante');
+      }
+      formData.set('modo_indicadores', modo);
+
+      evalEnCurso = true;
+      button.disabled = true;
+      button.innerText = 'Procesando OCR y riesgo...';
+      button.setAttribute('aria-busy', 'true');
+      mostrarFeedbackEval('info', 'Procesando el expediente. Espere la respuesta del servidor; no reenvíe el formulario.');
+
+      try {
+        const res = await fetch('/api/v1/expedientes/evaluar', {
+          method: 'POST',
+          headers: authHeaders(),
+          body: formData
+        });
+
+        let json = {};
+        try {
+          json = await res.json();
+        } catch (errorJson) {
+          json = {};
         }
-        cargarBandeja();
-      } else {
-        alert('Error de validación: ' + json.detail);
+
+        if (res.status === 401) {
+          sessionStorage.removeItem(SIMEL_TOKEN_KEY);
+          actualizarEstadoSesion('● Sesión vencida: vuelva a autenticarse', false);
+          throw new Error(detalleErrorApi(json, 'La sesión JWT venció o no es válida. Inicie sesión nuevamente.'));
+        }
+        if (res.status === 403) {
+          throw new Error(detalleErrorApi(json, 'Su rol no tiene permisos para evaluar expedientes.'));
+        }
+        if (res.status === 413) {
+          throw new Error(detalleErrorApi(json, 'El archivo PDF supera el tamaño máximo permitido.'));
+        }
+        if (res.status === 422) {
+          throw new Error(detalleErrorApi(json, 'Los datos del formulario o el PDF no son válidos. Revise el expediente.'));
+        }
+        if (!res.ok) {
+          throw new Error(detalleErrorApi(json, 'El servidor no pudo procesar el expediente (HTTP ' + res.status + ').'));
+        }
+
+        renderResultadoEvaluacion(json.expediente, fileInput.files[0]?.name);
+        mostrarFeedbackEval('ok', 'Expediente ' + (json.expediente?.codigo_expediente || '') + ' procesado correctamente. Resultados actualizados.');
+        await cargarBandeja();
+      } catch (error) {
+        let mensaje = String(error.message || error);
+        if (mensaje.includes('Failed to fetch') || mensaje.includes('NetworkError')) {
+          mensaje = 'No se pudo conectar con el servidor SIMEL. Verifique su conexión e intente nuevamente.';
+        }
+        mostrarFeedbackEval('error', mensaje);
+      } finally {
+        evalEnCurso = false;
+        button.disabled = false;
+        button.innerText = labelOriginal;
+        button.removeAttribute('aria-busy');
       }
     });
 
@@ -1482,13 +1724,25 @@
     document.getElementById('formPmv3').addEventListener('submit', ejecutarGrafoPmv3);
     document.getElementById('formHitlPmv3').addEventListener('submit', resolverHitlPmv3);
 
-    Promise.allSettled([
-      cargarBandeja(),
-      cargarNormativas(),
-      cargarAuditorias(),
-      cargarMetricasConsolidado(),
-      cargarPredictamenesPmv3()
-    ]);
+    if (getSimelToken()) {
+      actualizarEstadoSesion('● Sesión JWT Activa', true);
+      Promise.allSettled([
+        cargarBandeja(),
+        cargarNormativas(),
+        cargarAuditorias(),
+        cargarMetricasConsolidado(),
+        cargarPredictamenesPmv3()
+      ]);
+    } else {
+      actualizarEstadoSesion('● Sin sesión: autentíquese para operar', false);
+      cargarMetricasConsolidado();
+      const mensajeSesion = '<tr><td colspan="8" class="p-6 text-center text-slate-500">Inicie sesión para consultar esta sección.</td></tr>';
+      ['tablaBandeja', 'tablaNormativas', 'tablaAuditorias'].forEach((id) => {
+        const tbody = document.getElementById(id);
+        if (tbody) tbody.innerHTML = mensajeSesion;
+      });
+      cargarPredictamenesPmv3();
+    }
   </script>
 </body>
 </html>

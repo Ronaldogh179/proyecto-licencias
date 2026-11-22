@@ -1,5 +1,5 @@
-﻿from dataclasses import dataclass
-from typing import Dict, Optional
+﻿from dataclasses import dataclass, field
+from typing import Any, Dict, Optional
 
 @dataclass
 class IngresoExpedienteInputDTO:
@@ -25,6 +25,8 @@ class ResultadoOCRDTO:
     texto_resumen: str
     confianza_ocr: float
     tiempo_seg: float
+    texto_extraido_completo: str = ""
+    metadatos_ocr: Dict[str, Any] = field(default_factory=dict)
 
 @dataclass
 class ResultadoPrediccionDTO:

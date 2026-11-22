@@ -7,7 +7,7 @@
 [![Supabase](https://img.shields.io/badge/Supabase-pgvector-3ECF8E?logo=supabase&logoColor=white)](https://supabase.com/)
 [![PyMuPDF](https://img.shields.io/badge/PyMuPDF-PDF-EF3939)](https://pymupdf.readthedocs.io/)
 [![XGBoost](https://img.shields.io/badge/XGBoost-ML-FF6600)](https://xgboost.readthedocs.io/)
-[![pytest](https://img.shields.io/badge/pytest-43%20passed-0A9EDC?logo=pytest&logoColor=white)](PLAN_DE_PRUEBAS.md)
+[![pytest](https://img.shields.io/badge/pytest-61%20passed-0A9EDC?logo=pytest&logoColor=white)](PLAN_DE_PRUEBAS.md)
 [![Coverage](https://img.shields.io/badge/coverage-91%25-brightgreen)](PLAN_DE_PRUEBAS.md)
 [![Version](https://img.shields.io/badge/version-3.0.0-blue)](README.md)
 
@@ -34,7 +34,7 @@ Plataforma web para la evaluación, fiscalización y auditoría documental de li
 | PMV 1 | OCR, XGBoost/Random Forest, SLA y bandeja priorizada. | Completado |
 | PMV 2 | RAG normativo pgvector, cruce inter-fojas y dictámenes explicables. | Completado |
 | PMV 3 | StateGraph multiagente, supervisión HITL, SLA y Acta Resolutiva PDF. | Completado |
-| Calidad | 43 pruebas locales aisladas (28 unitarias + 15 integración), cobertura 91% y 5 procedimientos almacenados declarados. | Completado |
+| Calidad | 61 pruebas locales aisladas (41 unitarias + 20 de integración), cobertura 91% y 5 procedimientos almacenados declarados. | Completado |
 
 ## Stack tecnológico
 
@@ -68,6 +68,7 @@ Marco normativo considerado: Ley N.° 28976 (Ley Marco de Licencia de Funcionami
 - Predicción del riesgo de observación con XGBoost como modelo principal y Random Forest como respaldo.
 - Cálculo de SLA, priorización de la bandeja y persistencia híbrida (Supabase + caché local).
 - Autenticación institucional con JWT firmado mediante HMAC-SHA256.
+- OCR híbrido: PyMuPDF extrae texto nativo y Tesseract procesa las páginas escaneadas. El formulario ofrece modo automático (indicadores estimados desde el PDF, sujetos a revisión) o manual (respeta los valores del evaluador) y valida PDF vacíos, dañados o protegidos con contraseña.
 
 ### PMV 2: RAG normativo y auditoría inter-fojas
 
@@ -286,7 +287,7 @@ También se puede ejecutar el plan completo con doble clic en `EJECUTAR_PRUEBAS.
 
 Resultado verificado en `main`:
 
-- 45 pruebas locales aprobadas (30 unitarias + 15 de integración), ejecutadas con base de datos aislada.
+- 61 pruebas locales aprobadas (41 unitarias + 20 de integración), ejecutadas con base de datos aislada.
 - Cobertura total: 91% (`pytest --cov=src`).
 - 9 pruebas remotas base aprobadas y 5 pruebas PMV 3 aprobadas tras el despliegue v3.0.0.
 - Detalle y resultados finales en `CIERRE_TECNICO_PMV3.md` y `PLAN_DE_PRUEBAS.md`.

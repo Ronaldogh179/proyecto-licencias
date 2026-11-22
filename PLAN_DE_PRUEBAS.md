@@ -1,12 +1,12 @@
 ﻿# Plan de Pruebas - SIMEL El Tambo (PMV 1 + PMV 2 + PMV 3)
 
-**Fecha de última ejecución local:** 21/11/2026
+**Fecha de última ejecución local:** 22/11/2026
 
 **Entorno local:** Windows, Python 3.14.7, pytest, coverage 91%
 
-**Entorno remoto:** https://proyecto-licencias.onrender.com (sin cambios en este cierre)
+**Entorno remoto:** https://proyecto-licencias.onrender.com
 
-**Resultado local:** 43/43 pruebas PASS (28 unitarias + 15 integración), base de datos aislada
+**Resultado local:** 61/61 pruebas PASS (41 unitarias + 20 integración), base de datos aislada
 
 **Resultado remoto:** 9/9 pruebas base PASS y 5/5 pruebas PMV 3 PASS tras el despliegue v3.0.0.
 
@@ -87,7 +87,25 @@ Comando base:
 | UNIT-27 | `test_guardar_predictamen_fallido_revierte_estado` | Fallo HTTP 503 al persistir pre-dictamen revierte caché local. | PASS |
 | UNIT-28 | `test_registrar_hitl_fallido_revierte_decision` | Fallo de RPC HITL revierte decisión, firma y archivo local. | PASS |
 
-**Resultado local:** `45 passed`, `1 warning` (deprecación de `starlette.testclient` con `httpx`), cobertura total `91%`.
+**Resultado local:** `61 passed`, `1 warning` (deprecación de `starlette.testclient` con `httpx`), cobertura total `91%`.
+
+### 2.1 Pruebas de regresión OCR y formulario (22/11/2026)
+
+| ID | Archivo / prueba | Objetivo | Resultado |
+|---|---|---|---|
+| REG-01 | `test_ocr_pdf_digital_extrae_texto_real_y_confianza_de_extraccion` | PDF digital: texto real, confianza 100 y metadatos de extracción. | PASS |
+| REG-02 | `test_ocr_pagina_escaneada_invoca_tesseract_y_calcula_confianza` | Página sin texto: invocación de Tesseract y confianza calculada desde `image_to_data`. | PASS |
+| REG-03 | `test_ocr_pagina_escaneada_sin_tesseract_falla_con_mensaje_claro` | Error comprensible cuando el servidor no tiene Tesseract. | PASS |
+| REG-04 | `test_ocr_respeta_indicadores_manuales_sobre_los_estimados` | Los valores manuales del evaluador prevalecen sobre la estimación OCR. | PASS |
+| REG-05 | `test_ocr_pdf_danado_falla_con_mensaje_claro` | PDF dañado rechazado con 422 y mensaje claro. | PASS |
+| REG-06 | `test_ocr_pdf_protegido_con_password_falla_con_mensaje_claro` | PDF protegido rechazado con 422 y mensaje claro. | PASS |
+| REG-07 | `test_ocr_sin_pdf_usa_respaldo_y_confianza_cero` | Sin PDF: respaldo del formulario y confianza 0, sin valor fijo. | PASS |
+| REG-08 | `test_evaluar_rechaza_pdf_vacio_danado_y_protegido` | Endpoint `evaluar`: validación de archivo vacío, dañado y protegido. | PASS |
+| REG-09 | `test_evaluar_modo_automatico_ignora_manuales_y_devuelve_metricas_reales` | Modo automático ignora manuales y devuelve texto completo y métricas reales. | PASS |
+| REG-10 | `test_evaluar_modo_manual_respeta_los_valores_del_evaluador` | Modo manual conserva los indicadores elegidos. | PASS |
+| REG-11 | `test_evaluar_exige_sesion_valida_y_rol_autorizado` | 401 sin JWT y 403 para rol sin permisos. | PASS |
+| REG-12 | `test_evaluar_rechaza_modo_indicadores_invalido` | Validación 422 del modo de indicadores. | PASS |
+| REG-13 | `test_web_ui_ocr_regression.py` (4 pruebas) | Progreso, bloqueo de duplicados, errores, panel sin datos de ejemplo, texto y confianza real. | PASS |
 
 ## 3. Pruebas remotas de humo
 

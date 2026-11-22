@@ -75,6 +75,8 @@ class ProcesarExpedientePMV1UseCase(ProcesarExpedienteInputPort):
             texto_resumen=resultado_ocr.texto_resumen,
             confianza=resultado_ocr.confianza_ocr,
             tiempo_seg=resultado_ocr.tiempo_seg,
+            texto_completo=resultado_ocr.texto_extraido_completo,
+            metadatos=resultado_ocr.metadatos_ocr,
         )
 
         prediccion = self._predictor_port.predecir_riesgo(
