@@ -1,7 +1,7 @@
 ﻿import io
 import time
 from functools import lru_cache
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Tuple
 
 import pymupdf
 
