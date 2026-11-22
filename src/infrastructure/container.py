@@ -9,13 +9,14 @@ from src.adapters.outbound.ocr.tesseract_ocr_adapter import PyMuPDFTesseractOCRA
 from src.adapters.outbound.persistence.supabase_repository_adapter import (
     HybridSupabaseExpedienteRepository,
     InMemoryUsuarioRepository,
+    SupabaseUsuarioRepository,
 )
 from src.application.use_cases.procesar_expediente_uc import (
     AutenticarFuncionarioUseCase,
     ListarBandejaPriorizadaUseCase,
     ProcesarExpedientePMV1UseCase,
 )
-from src.infrastructure.config import JWTTokenGenerator
+from src.infrastructure.config import JWTTokenGenerator, JWTTokenVerifier
 
 
 class DependencyContainer:
@@ -27,14 +28,25 @@ class DependencyContainer:
         self._indexar_normativa_uc: Optional[Any] = None
         self._auditar_pmv2_uc: Optional[Any] = None
         self._data_masiva_uc: Optional[Any] = None
+        self._orquestador_langgraph_adapter: Optional[Any] = None
+        self._generador_acta_pdf_adapter: Optional[Any] = None
+        self._orquestar_predictamen_pmv3_uc: Optional[Any] = None
+        self._resolver_hitl_pmv3_uc: Optional[Any] = None
+        self._listar_predictamenes_pmv3_uc: Optional[Any] = None
 
         self.entrenador_ml = EntrenadorModelosPMV1()
         self.ocr_adapter = PyMuPDFTesseractOCRAdapter()
         self.xgb_adapter = XGBoostStrategyAdapter(self.entrenador_ml)
         self.rf_adapter = RandomForestStrategyAdapter(self.entrenador_ml)
+        JWTTokenGenerator.validar_configuracion_produccion()
         self.expediente_repo = HybridSupabaseExpedienteRepository()
-        self.usuario_repo = InMemoryUsuarioRepository()
+        self.usuario_repo = (
+            SupabaseUsuarioRepository()
+            if JWTTokenGenerator.es_produccion()
+            else InMemoryUsuarioRepository()
+        )
 
+        self.verificador_token = JWTTokenVerifier()
         self.auth_use_case = AutenticarFuncionarioUseCase(
             usuario_repo=self.usuario_repo,
             token_generator=JWTTokenGenerator,
@@ -109,6 +121,68 @@ class DependencyContainer:
                 auditoria_use_case=self.auditar_pmv2_uc,
             )
         return self._data_masiva_uc
+
+    @property
+    def orquestador_langgraph_adapter(self):
+        if self._orquestador_langgraph_adapter is None:
+            from src.adapters.outbound.agents.langgraph_multiagent_adapter import (
+                LangGraphStateGraphMultiagenteAdapter,
+            )
+
+            self._orquestador_langgraph_adapter = LangGraphStateGraphMultiagenteAdapter()
+        return self._orquestador_langgraph_adapter
+
+    @property
+    def generador_acta_pdf_adapter(self):
+        if self._generador_acta_pdf_adapter is None:
+            from src.adapters.outbound.pdf.pymupdf_acta_generator_adapter import (
+                PyMuPDFActaResolutivaAdapter,
+            )
+
+            self._generador_acta_pdf_adapter = PyMuPDFActaResolutivaAdapter()
+        return self._generador_acta_pdf_adapter
+
+    @property
+    def orquestar_predictamen_pmv3_uc(self):
+        if self._orquestar_predictamen_pmv3_uc is None:
+            from src.application.use_cases.orquestar_predictamen_pmv3_uc import (
+                OrquestarPreDictamenMultiagentePMV3UseCase,
+            )
+
+            self._orquestar_predictamen_pmv3_uc = OrquestarPreDictamenMultiagentePMV3UseCase(
+                predictor_riesgo=self.xgb_adapter,
+                motor_rag=self.rag_adapter,
+                orquestador_grafo=self.orquestador_langgraph_adapter,
+                repositorio_pmv3=self.expediente_repo,
+                repositorio_expedientes=self.expediente_repo,
+            )
+        return self._orquestar_predictamen_pmv3_uc
+
+    @property
+    def resolver_hitl_pmv3_uc(self):
+        if self._resolver_hitl_pmv3_uc is None:
+            from src.application.use_cases.orquestar_predictamen_pmv3_uc import (
+                ResolverDecisionHITLUseCase,
+            )
+
+            self._resolver_hitl_pmv3_uc = ResolverDecisionHITLUseCase(
+                repositorio_pmv3=self.expediente_repo,
+                generador_pdf=self.generador_acta_pdf_adapter,
+                repositorio_expedientes=self.expediente_repo,
+            )
+        return self._resolver_hitl_pmv3_uc
+
+    @property
+    def listar_predictamenes_pmv3_uc(self):
+        if self._listar_predictamenes_pmv3_uc is None:
+            from src.application.use_cases.orquestar_predictamen_pmv3_uc import (
+                ListarPredictamenesPMV3UseCase,
+            )
+
+            self._listar_predictamenes_pmv3_uc = ListarPredictamenesPMV3UseCase(
+                repositorio_pmv3=self.expediente_repo,
+            )
+        return self._listar_predictamenes_pmv3_uc
 
 
 container = DependencyContainer()

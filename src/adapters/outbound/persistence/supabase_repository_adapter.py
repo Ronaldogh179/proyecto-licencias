@@ -10,6 +10,7 @@ from dotenv import load_dotenv
 from src.application.ports.output_ports import (
     AuditoriaPMV2RepositoryPort,
     ExpedienteRepositoryPort,
+    GobernanzaPMV3RepositoryPort,
     UsuarioRepositoryPort,
 )
 from src.domain.entities.expediente import EvaluacionRiesgoDomain, Expediente
@@ -18,29 +19,45 @@ from src.domain.entities.normativa_rag import (
     FragmentoNormativoDomain,
     ResultadoCruceInterFojasDomain,
 )
+from src.domain.entities.orquestacion_pmv3 import (
+    PreDictamenMultiagentePMV3Domain,
+    TrazaNodoAgenteDomain,
+)
 from src.domain.entities.usuario import Usuario
+from src.infrastructure.config import JWTTokenGenerator
 
 load_dotenv()
 
+_DEMO_PASSWORD_POR_DEFECTO = "demo1234"
+
 
 class InMemoryUsuarioRepository(UsuarioRepositoryPort):
-    """Repositorio de usuarios institucionales para autenticación JWT (PMV1-1-HU01)."""
+    """Repositorio demo de usuarios; se usa solo en desarrollo y pruebas."""
 
-    def __init__(self) -> None:
+    def __init__(self, password_demo: Optional[str] = None) -> None:
+        password = password_demo or os.getenv("SIMEL_DEMO_PASSWORD", _DEMO_PASSWORD_POR_DEFECTO)
+        password_hash = JWTTokenGenerator.generar_hash_password(password)
         self._usuarios = {
             "evaluador@eltambo.gob.pe": Usuario(
                 id_usuario="USR-TAMBO-001",
-                nombre_completo="Ing. Simon Ronaldo Gonzales Jacinto",
+                nombre_completo="Evaluador Demo SIMEL",
                 correo_institucional="evaluador@eltambo.gob.pe",
-                password_hash="$2b$12$hash_simulado_seguro_ley29733",
+                password_hash=password_hash,
                 rol_operativo="EVALUADOR_LICENCIAS",
             ),
             "mesadepartes@eltambo.gob.pe": Usuario(
                 id_usuario="USR-TAMBO-002",
-                nombre_completo="Asist. Diego Uriol Ochoa Vilchez",
+                nombre_completo="Mesa de Partes Demo SIMEL",
                 correo_institucional="mesadepartes@eltambo.gob.pe",
-                password_hash="$2b$12$hash_simulado_seguro_ley29733",
+                password_hash=password_hash,
                 rol_operativo="MESA_DE_PARTES",
+            ),
+            "admin.ti@eltambo.gob.pe": Usuario(
+                id_usuario="USR-TAMBO-003",
+                nombre_completo="Administrador TI Demo SIMEL",
+                correo_institucional="admin.ti@eltambo.gob.pe",
+                password_hash=password_hash,
+                rol_operativo="ADMIN_TI",
             ),
         }
 
@@ -48,21 +65,78 @@ class InMemoryUsuarioRepository(UsuarioRepositoryPort):
         return self._usuarios.get(correo.strip().lower())
 
 
-class HybridSupabaseExpedienteRepository(ExpedienteRepositoryPort, AuditoriaPMV2RepositoryPort):
+class SupabaseUsuarioRepository(UsuarioRepositoryPort):
+    """Repositorio de usuarios institucionales para staging y producción."""
+
+    def __init__(self) -> None:
+        self._url = os.getenv("SUPABASE_URL", "").strip().rstrip("/")
+        self._key = (
+            os.getenv("SUPABASE_SECRET_KEY", "").strip()
+            or os.getenv("SUPABASE_KEY", "").strip()
+        )
+        if not self._url or not self._key:
+            raise RuntimeError("SUPABASE_URL y SUPABASE_SECRET_KEY son obligatorias para usuarios de producción.")
+
+    def obtener_por_correo(self, correo: str) -> Optional[Usuario]:
+        correo_normalizado = (correo or "").strip().lower()
+        if not correo_normalizado:
+            return None
+        respuesta = httpx.get(
+            f"{self._url}/rest/v1/usuarios",
+            params={
+                "correo_institucional": f"eq.{correo_normalizado}",
+                "select": "id_usuario,nombre_completo,correo_institucional,password_hash,rol_operativo,estado_activo",
+            },
+            headers={
+                "apikey": self._key,
+                "Authorization": f"Bearer {self._key}",
+                "Content-Type": "application/json",
+            },
+            timeout=3.5,
+        )
+        if respuesta.status_code >= 300:
+            raise RuntimeError("No se pudo consultar el usuario institucional en Supabase.")
+        datos = respuesta.json()
+        if not isinstance(datos, list) or not datos:
+            return None
+        fila = datos[0]
+        return Usuario(
+            id_usuario=str(fila["id_usuario"]),
+            nombre_completo=str(fila["nombre_completo"]),
+            correo_institucional=str(fila["correo_institucional"]),
+            password_hash=str(fila["password_hash"]),
+            rol_operativo=str(fila["rol_operativo"]),
+            estado_activo=bool(fila.get("estado_activo", True)),
+        )
+
+
+class HybridSupabaseExpedienteRepository(
+    ExpedienteRepositoryPort,
+    AuditoriaPMV2RepositoryPort,
+    GobernanzaPMV3RepositoryPort,
+):
     """PATRÓN REPOSITORY: sincroniza con Supabase Cloud y mantiene caché local de respaldo."""
 
-    def __init__(self, db_path: str = "src/infrastructure/ml_artifacts/bd_expedientes_local.json") -> None:
+    def __init__(self, db_path: Optional[str] = None) -> None:
+        db_path = (
+            db_path
+            or os.getenv("SIMEL_DB_PATH")
+            or "src/infrastructure/ml_artifacts/bd_expedientes_local.json"
+        )
         self._db_file = Path(db_path)
         self._db_file.parent.mkdir(parents=True, exist_ok=True)
         self._fragmentos_file = self._db_file.parent / "normativas_vectoriales_local.json"
         self._auditorias_file = self._db_file.parent / "dictamenes_auditoria_local.json"
+        self._predictamenes_file = self._db_file.parent / "predictamenes_pmv3_local.json"
         self._supabase_url = os.getenv("SUPABASE_URL", "").rstrip("/")
         self._supabase_key = os.getenv("SUPABASE_SECRET_KEY") or os.getenv("SUPABASE_KEY", "")
         self._expedientes: List[Expediente] = []
         self._fragmentos: List[FragmentoNormativoDomain] = []
         self._auditorias: List[DictamenAuditoriaPMV2Domain] = []
+        self._predictamenes_pmv3: List[PreDictamenMultiagentePMV3Domain] = []
         self._cargar_semilla_o_archivo()
         self._cargar_fragmentos_y_auditorias()
+        self._cargar_predictamenes_pmv3()
 
     @property
     def _headers(self) -> Dict[str, str]:
@@ -91,6 +165,29 @@ class HybridSupabaseExpedienteRepository(ExpedienteRepositoryPort, AuditoriaPMV2
         except Exception:
             pass
         return None
+
+    def _post_rpc_strict(self, nombre_funcion: str, payload: Dict[str, Any], timeout: float = 3.5) -> Optional[Any]:
+        if not self._supabase_url or not self._supabase_key:
+            return None
+        try:
+            respuesta = httpx.post(
+                f"{self._supabase_url}/rest/v1/rpc/{nombre_funcion}",
+                json=payload,
+                headers=self._headers,
+                timeout=timeout,
+            )
+        except Exception as error:
+            raise RuntimeError(
+                f"No se pudo invocar {nombre_funcion} en Supabase: {error}"
+            ) from error
+        if respuesta.status_code >= 300:
+            raise RuntimeError(
+                f"No se pudo invocar {nombre_funcion} en Supabase. HTTP {respuesta.status_code}."
+            )
+        try:
+            return respuesta.json()
+        except Exception:
+            return {"status": "ok"}
 
     def _payload_expediente(self, expediente: Expediente) -> Dict[str, Any]:
         evaluacion = expediente.evaluacion_riesgo
@@ -265,6 +362,305 @@ class HybridSupabaseExpedienteRepository(ExpedienteRepositoryPort, AuditoriaPMV2
                     )
             except Exception:
                 self._auditorias = []
+
+    def _cargar_predictamenes_pmv3(self) -> None:
+        if self._predictamenes_file.exists():
+            try:
+                raw = json.loads(self._predictamenes_file.read_text(encoding="utf-8"))
+                self._predictamenes_pmv3 = []
+                for item in raw:
+                    nodos = item.get("nodos_ejecutados", [])
+                    nodos_obj = [
+                        TrazaNodoAgenteDomain(**nodo) if isinstance(nodo, dict) else nodo
+                        for nodo in nodos
+                    ]
+                    item_copy = {k: v for k, v in item.items() if k != "nodos_ejecutados"}
+                    self._predictamenes_pmv3.append(
+                        PreDictamenMultiagentePMV3Domain(
+                            **item_copy,
+                            nodos_ejecutados=nodos_obj,
+                        )
+                    )
+                if self._predictamenes_pmv3:
+                    return
+            except Exception:
+                self._predictamenes_pmv3 = []
+
+        self._predictamenes_pmv3 = [
+            self._construir_predictamen_semilla(
+                codigo_expediente="EXP-2026-0348",
+                decision="OBSERVADO_HITL",
+                probabilidad=0.9420,
+                nivel="ALTO",
+                similitud=0.9120,
+                compatibilidad="COMPATIBLE_CON_RESTRICCION",
+                conforme_interfojas=False,
+                discrepancias=2,
+                recomendacion="EMITIR_ESQUELA_DE_OBSERVACION",
+                dias=2,
+                funcionario="evaluador@eltambo.gob.pe",
+                observaciones="Se notifica esquela por ITSE faltante y discrepancia de área.",
+            ),
+            self._construir_predictamen_semilla(
+                codigo_expediente="EXP-2026-0349",
+                decision="PENDIENTE_REVISION_HITL",
+                probabilidad=0.6150,
+                nivel="MEDIO",
+                similitud=0.9340,
+                compatibilidad="COMPATIBLE",
+                conforme_interfojas=True,
+                discrepancias=0,
+                recomendacion="OTORGAR_LICENCIA_CONFORME",
+                dias=3,
+            ),
+            self._construir_predictamen_semilla(
+                codigo_expediente="EXP-2026-0350",
+                decision="APROBADO_HITL",
+                probabilidad=0.0840,
+                nivel="BAJO",
+                similitud=0.9610,
+                compatibilidad="COMPATIBLE",
+                conforme_interfojas=True,
+                discrepancias=0,
+                recomendacion="OTORGAR_LICENCIA_CONFORME",
+                dias=1,
+                funcionario="evaluador@eltambo.gob.pe",
+                observaciones="Expediente conforme; se aprueba licencia definitiva.",
+            ),
+        ]
+        self._persistir_predictamenes_en_disco()
+
+    def _construir_predictamen_semilla(
+        self,
+        codigo_expediente: str,
+        decision: str,
+        probabilidad: float,
+        nivel: str,
+        similitud: float,
+        compatibilidad: str,
+        conforme_interfojas: bool,
+        discrepancias: int,
+        recomendacion: str,
+        dias: int,
+        funcionario: str = "",
+        observaciones: str = "",
+    ) -> PreDictamenMultiagentePMV3Domain:
+        expediente = self.obtener_por_codigo(codigo_expediente)
+        razon_social = (
+            expediente.razon_social_nombre
+            if expediente is not None
+            else "Administrado MYPE El Tambo S.A.C."
+        )
+        giro = expediente.giro_comercial if expediente is not None else "Restaurante"
+        zona = "RDM" if giro == "Restaurante" else "CZ"
+        area = float(expediente.area_comercial_m2) if expediente is not None else 85.0
+        id_expediente = (
+            expediente.id_expediente if expediente is not None else codigo_expediente
+        )
+        trazas = [
+            TrazaNodoAgenteDomain(
+                1,
+                "AgentePercepcionOCR",
+                "COMPLETADO",
+                "OCR validó las variables documentales del expediente semilla.",
+                1.1,
+            ),
+            TrazaNodoAgenteDomain(
+                2,
+                "AgentePredictivoXGBoost",
+                "COMPLETADO",
+                f"XGBoost estimó riesgo {nivel} con probabilidad {probabilidad:.4f}.",
+                0.9,
+            ),
+            TrazaNodoAgenteDomain(
+                3,
+                "AgenteNormativoRAG",
+                "COMPLETADO",
+                f"RAG recuperó similitud coseno {similitud:.4f} y compatibilidad {compatibilidad}.",
+                1.3,
+            ),
+            TrazaNodoAgenteDomain(
+                4,
+                "AgenteSupervisorAuditor",
+                "COMPLETADO",
+                "Supervisor consolidó el pre-dictamen y verificó la base legal.",
+                1.0,
+            ),
+        ]
+        return PreDictamenMultiagentePMV3Domain(
+            id_predictamen=f"PRED-PMV3-{codigo_expediente}",
+            id_expediente=id_expediente,
+            codigo_expediente=codigo_expediente,
+            razon_social_nombre=razon_social,
+            giro_comercial=giro,
+            zona_urbana=zona,
+            area_comercial_m2=area,
+            probabilidad_riesgo_ml=probabilidad,
+            nivel_riesgo_ml=nivel,
+            similitud_coseno_rag=similitud,
+            context_precision_rag=0.94,
+            compatibilidad_zonificacion=compatibilidad,
+            es_conforme_interfojas=conforme_interfojas,
+            total_discrepancias_interfojas=discrepancias,
+            temperatura_llm=0.1,
+            iteraciones_grafo=2 if not conforme_interfojas or nivel == "ALTO" else 1,
+            alucinaciones_detectadas=0,
+            recomendacion_ia=recomendacion,
+            cita_legal_consolidada=(
+                "Ley N.° 28976 (TUO D.S. N.° 163-2020-PCM), Artículos 6.º y 7.º; "
+                "Ley N.° 31814 (D.S. N.° 115-2025-PCM); Ley N.° 29733; "
+                "Ordenanza Municipal N.° 018-2024-MDT/CM."
+            ),
+            texto_predictamen_explicable=(
+                "I. VISTOS Y EXTRACCIÓN OCR\n"
+                f"Expediente semilla {codigo_expediente} de {razon_social}.\n\n"
+                "II. ANÁLISIS PREDICTIVO XGBOOST\n"
+                f"Probabilidad {probabilidad:.4f} con nivel de riesgo {nivel}.\n\n"
+                "III. AUDITORÍA VECTORIAL RAG E INTER-FOJAS\n"
+                f"Similitud del coseno {similitud:.4f}; compatibilidad {compatibilidad}.\n\n"
+                "IV. PRE-DICTAMEN MOTIVADO Y BASE LEGAL\n"
+                f"Recomendación: {recomendacion}.\n\n"
+                "V. CONTROL SLA Y SUPERVISIÓN HUMANA LEY 31814\n"
+                "Pre-dictamen sujeto a firma obligatoria del funcionario evaluador."
+            ),
+            nodos_ejecutados=trazas,
+            dias_habiles_transcurridos=dias,
+            dias_restantes_sla=max(0, 8 - dias),
+            estado_semaforo_sla=(
+                "DENTRO_DEL_PLAZO_LEGAL" if dias < 6 else "ALERTA_PROXIMO_A_VENCER"
+            ),
+            cumple_sla_legal=dias <= 8,
+            decision_final_humano=decision,
+            funcionario_evaluador_firma=funcionario,
+            observaciones_funcionario_hitl=observaciones,
+            fecha_generacion_ia="2026-10-29T12:00:00+00:00",
+            fecha_resolucion_hitl=(
+                "2026-10-29T12:30:00+00:00"
+                if decision != "PENDIENTE_REVISION_HITL"
+                else ""
+            ),
+            latencia_total_grafo_ms=4.3,
+        )
+
+    def _persistir_predictamenes_en_disco(self) -> None:
+        data = [asdict(predictamen) for predictamen in self._predictamenes_pmv3]
+        self._predictamenes_file.write_text(
+            json.dumps(data, indent=2, ensure_ascii=False),
+            encoding="utf-8",
+        )
+
+    def guardar_predictamen_pmv3(
+        self,
+        predictamen: PreDictamenMultiagentePMV3Domain,
+    ) -> Dict[str, Any]:
+        estado_anterior = list(self._predictamenes_pmv3)
+        try:
+            self._predictamenes_pmv3 = [
+                existente
+                for existente in self._predictamenes_pmv3
+                if existente.codigo_expediente != predictamen.codigo_expediente
+            ]
+            self._predictamenes_pmv3.append(predictamen)
+            self._persistir_predictamenes_en_disco()
+
+            if self._supabase_url and self._supabase_key:
+                respuesta = httpx.post(
+                    f"{self._supabase_url}/rest/v1/predictamenes_pmv3?on_conflict=codigo_expediente",
+                    json=asdict(predictamen),
+                    headers=self._headers,
+                    timeout=3.5,
+                )
+                if respuesta.status_code >= 300:
+                    raise RuntimeError(
+                        "No se pudo persistir el predictamen PMV3 en Supabase. "
+                        f"HTTP {respuesta.status_code}."
+                    )
+        except Exception:
+            self._predictamenes_pmv3 = estado_anterior
+            self._persistir_predictamenes_en_disco()
+            raise
+
+        return asdict(predictamen)
+
+    def obtener_predictamen_pmv3_por_codigo(
+        self,
+        codigo_expediente: str,
+    ) -> Optional[PreDictamenMultiagentePMV3Domain]:
+        codigo = (codigo_expediente or "").strip().upper()
+        for predictamen in self._predictamenes_pmv3:
+            if predictamen.codigo_expediente.strip().upper() == codigo:
+                return predictamen
+        return None
+
+    def listar_predictamenes_pmv3(self) -> List[Dict[str, Any]]:
+        return [asdict(predictamen) for predictamen in self._predictamenes_pmv3]
+
+    def registrar_resolucion_hitl_pmv3(
+        self,
+        codigo_expediente: str,
+        decision: str,
+        funcionario: str,
+        observaciones: str,
+        fecha_iso: str,
+    ) -> Dict[str, Any]:
+        predictamen = self.obtener_predictamen_pmv3_por_codigo(codigo_expediente)
+        campos = (
+            "decision_final_humano",
+            "funcionario_evaluador_firma",
+            "observaciones_funcionario_hitl",
+            "fecha_resolucion_hitl",
+        )
+        valores_anteriores = {
+            campo: getattr(predictamen, campo) if predictamen is not None else None
+            for campo in campos
+        }
+        contenido_anterior = (
+            self._predictamenes_file.read_text(encoding="utf-8")
+            if self._predictamenes_file.exists()
+            else None
+        )
+        try:
+            if predictamen is not None:
+                predictamen.decision_final_humano = decision
+                predictamen.funcionario_evaluador_firma = funcionario
+                predictamen.observaciones_funcionario_hitl = observaciones
+                predictamen.fecha_resolucion_hitl = fecha_iso
+                self._persistir_predictamenes_en_disco()
+
+            respuesta_rpc = self._post_rpc_strict(
+                "sp_registrar_resolucion_hitl_pmv3",
+                {
+                    "p_codigo_expediente": codigo_expediente,
+                    "p_decision_final_humano": decision,
+                    "p_funcionario_evaluador_firma": funcionario,
+                    "p_observaciones_funcionario_hitl": observaciones,
+                    "p_fecha_resolucion_hitl": fecha_iso,
+                },
+            )
+        except Exception:
+            if predictamen is not None:
+                for campo, valor in valores_anteriores.items():
+                    setattr(predictamen, campo, valor)
+            if contenido_anterior is None:
+                if self._predictamenes_file.exists():
+                    self._predictamenes_file.unlink()
+            else:
+                self._predictamenes_file.write_text(contenido_anterior, encoding="utf-8")
+            raise
+
+        if isinstance(respuesta_rpc, dict):
+            respuesta_rpc.setdefault("status", "ok")
+            respuesta_rpc.setdefault("fuente", "supabase_rpc")
+            return respuesta_rpc
+
+        return {
+            "status": "ok",
+            "fuente": "cache_local",
+            "codigo_expediente": codigo_expediente,
+            "decision_final_humano": decision,
+            "funcionario_evaluador_firma": funcionario,
+            "fecha_resolucion_hitl": fecha_iso,
+        }
 
     def _persistir_en_disco(self) -> None:
         data = [asdict(expediente) for expediente in self._expedientes]
@@ -496,6 +892,75 @@ class HybridSupabaseExpedienteRepository(ExpedienteRepositoryPort, AuditoriaPMV2
             suma_context += dictamen.context_precision
 
         total_auditorias = len(self._auditorias)
+        total_predictamenes = len(self._predictamenes_pmv3)
+        aprobados_hitl = sum(
+            1
+            for predictamen in self._predictamenes_pmv3
+            if predictamen.decision_final_humano == "APROBADO_HITL"
+        )
+        observados_hitl = sum(
+            1
+            for predictamen in self._predictamenes_pmv3
+            if predictamen.decision_final_humano == "OBSERVADO_HITL"
+        )
+        rechazados_hitl = sum(
+            1
+            for predictamen in self._predictamenes_pmv3
+            if predictamen.decision_final_humano == "RECHAZADO_HITL"
+        )
+        pendientes_hitl = sum(
+            1
+            for predictamen in self._predictamenes_pmv3
+            if predictamen.decision_final_humano == "PENDIENTE_REVISION_HITL"
+        )
+        latencia_promedio_grafo = (
+            round(
+                sum(p.latencia_total_grafo_ms for p in self._predictamenes_pmv3)
+                / total_predictamenes,
+                3,
+            )
+            if total_predictamenes
+            else 0.0
+        )
+        cumplen_sla = sum(
+            1 for predictamen in self._predictamenes_pmv3 if predictamen.cumple_sla_legal
+        )
+        context_precision_promedio = (
+            round(
+                sum(p.context_precision_rag for p in self._predictamenes_pmv3)
+                / total_predictamenes,
+                4,
+            )
+            if total_predictamenes
+            else 0.0
+        )
+        metricas_pmv3: Dict[str, Any] = {
+            "total_predictamenes_pmv3": total_predictamenes,
+            "aprobados_hitl": aprobados_hitl,
+            "observados_hitl": observados_hitl,
+            "rechazados_hitl": rechazados_hitl,
+            "pendientes_hitl": pendientes_hitl,
+            "tasa_supervision_humana_pct": 100.0,
+            "tasa_supervision_humana_tipo": "propiedad_de_diseno_hitl_obligatorio",
+            "tasa_cumplimiento_sla_pct": (
+                round((cumplen_sla / total_predictamenes) * 100.0, 1)
+                if total_predictamenes
+                else 100.0
+            ),
+            "alucinaciones_normativas": sum(
+                p.alucinaciones_detectadas for p in self._predictamenes_pmv3
+            ),
+            "alucinaciones_normativas_tipo": "no_aplica_sin_llm_generativo",
+            "context_precision_pmv3_promedio": context_precision_promedio,
+            "context_precision_pmv3_tipo": (
+                "heuristica_experimental_derivada_de_similitud_coseno"
+            ),
+            "tipo_importancia_xai": "global_feature_importance_xgboost",
+            "latencia_promedio_grafo_ms": latencia_promedio_grafo,
+            "temperatura_determinista": 0.1,
+            "motor_tipo": "determinista_sin_llm",
+        }
+
         metricas_locales: Dict[str, Any] = {
             "fuente": "cache_local",
             "total_expedientes_pmv1": len(self._expedientes),
@@ -509,6 +974,7 @@ class HybridSupabaseExpedienteRepository(ExpedienteRepositoryPort, AuditoriaPMV2
             ),
             "distribucion_riesgo_pmv1": distribucion_riesgo,
             "distribucion_estado_pmv2": distribucion_pmv2,
+            "pmv3_multiagente_hitl": metricas_pmv3,
         }
 
         respuesta_rpc = self._post_rpc("sp_obtener_metricas_pmv1_pmv2", {})
@@ -526,6 +992,11 @@ class HybridSupabaseExpedienteRepository(ExpedienteRepositoryPort, AuditoriaPMV2
             "total_expedientes_persistidos": len(self._expedientes),
             "total_auditorias_persistidas": len(self._auditorias),
             "total_fragmentos_normativos": len(self._fragmentos),
+            "total_predictamenes_pmv3": len(self._predictamenes_pmv3),
+            "pmv3_tasa_cumplimiento_sla_pct": 100.0,
+            "pmv3_alucinaciones_normativas": 0,
+            "pmv3_alucinaciones_normativas_tipo": "no_aplica_sin_llm_generativo",
+            "pmv3_motor_tipo": "determinista_sin_llm",
             "modo_persistencia": (
                 "supabase_cloud+local_cache"
                 if self._supabase_url and self._supabase_key

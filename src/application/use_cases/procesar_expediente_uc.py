@@ -19,24 +19,29 @@ class AutenticarFuncionarioUseCase(AutenticarUsuarioInputPort):
         self._usuario_repo = usuario_repo
         self._token_generator = token_generator
 
-    def autenticar(self, correo: str, password: str, rol: str) -> Dict[str, str]:
+    def autenticar(self, correo: str, password: str, rol: str = "") -> Dict[str, str]:
         usuario = self._usuario_repo.obtener_por_correo(correo)
         if not usuario or not usuario.tiene_permiso_evaluacion():
             raise PermissionError("Credenciales inválidas o usuario sin permisos municipales.")
         if not self._token_generator.verificar_password(password, usuario.password_hash):
             raise PermissionError("Contraseña incorrecta.")
 
+        rol_operativo = str(usuario.rol_operativo).strip().upper()
+        rol_solicitado = str(rol or "").strip().upper()
+        if rol_solicitado and rol_solicitado != rol_operativo:
+            raise PermissionError("El rol solicitado no coincide con el rol del funcionario.")
+
         token_jwt = self._token_generator.generar_jwt(
             id_usuario=usuario.id_usuario,
             correo=usuario.correo_institucional,
-            rol=rol or usuario.rol_operativo,
+            rol=rol_operativo,
         )
         return {
             "access_token": token_jwt,
             "token_type": "Bearer",
             "usuario": usuario.nombre_completo,
             "correo": usuario.correo_institucional,
-            "rol": rol or usuario.rol_operativo,
+            "rol": rol_operativo,
         }
 
 class ProcesarExpedientePMV1UseCase(ProcesarExpedienteInputPort):

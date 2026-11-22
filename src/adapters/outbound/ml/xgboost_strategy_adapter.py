@@ -151,18 +151,35 @@ class XGBoostStrategyAdapter(PredictorRiesgoPort):
         prob = float(self._modelo.predict_proba(df_in)[0][1])
         latencia_ms = max(0.45, (time.perf_counter() - inicio) * 1000.0)
 
-        importancias = {
-            "documento_critico_faltante": 0.46,
-            "documentos_faltantes": 0.29,
-            "inconsistencias_detectadas": 0.16,
-            "giro_comercial": 0.05,
-            "tipo_tramite": 0.04,
-        }
+        importancias = self._importancias_globales()
+        metricas = self._entrenador.metricas_poc["xgboost"]
         return ResultadoPrediccionDTO(
             probabilidad_observacion=prob,
-            nombre_algoritmo="XGBoostClassifier (F1=0.925 | Recall=96.9%)",
+            nombre_algoritmo=(
+                f"XGBoostClassifier (F1={metricas['f1_test']:.3f} | "
+                f"Recall={metricas['recall']:.3f})"
+            ),
             importancia_variables=importancias,
             latencia_ms=latencia_ms,
+            tipo_importancia="global_feature_importance_xgboost",
+        )
+
+    def _importancias_globales(self) -> dict:
+        valores = getattr(self._modelo, "feature_importances_", None)
+        if valores is None:
+            return {
+                "documento_critico_faltante": 0.46,
+                "documentos_faltantes": 0.29,
+                "inconsistencias_detectadas": 0.16,
+                "giro_comercial": 0.05,
+                "tipo_tramite": 0.04,
+            }
+        importancias = {
+            columna: round(float(valor), 4)
+            for columna, valor in zip(self._entrenador.COLUMNAS_X, valores)
+        }
+        return dict(
+            sorted(importancias.items(), key=lambda item: item[1], reverse=True)
         )
 
 
@@ -198,15 +215,32 @@ class RandomForestStrategyAdapter(PredictorRiesgoPort):
         prob = float(self._modelo.predict_proba(df_in)[0][1])
         latencia_ms = max(0.65, (time.perf_counter() - inicio) * 1000.0)
 
+        metricas = self._entrenador.metricas_poc["random_forest"]
         return ResultadoPrediccionDTO(
             probabilidad_observacion=prob,
-            nombre_algoritmo="RandomForestClassifier (F1=0.917 | Recall=95.3%)",
-            importancia_variables={
+            nombre_algoritmo=(
+                f"RandomForestClassifier (F1={metricas['f1_test']:.3f} | "
+                f"Recall={metricas['recall']:.3f})"
+            ),
+            importancia_variables=self._importancias_globales(),
+            latencia_ms=latencia_ms,
+            tipo_importancia="global_feature_importance_random_forest",
+        )
+
+    def _importancias_globales(self) -> dict:
+        valores = getattr(self._modelo, "feature_importances_", None)
+        if valores is None:
+            return {
                 "documento_critico_faltante": 0.42,
                 "documentos_faltantes": 0.31,
                 "inconsistencias_detectadas": 0.18,
                 "giro_comercial": 0.05,
                 "tipo_tramite": 0.04,
-            },
-            latencia_ms=latencia_ms,
+            }
+        importancias = {
+            columna: round(float(valor), 4)
+            for columna, valor in zip(self._entrenador.COLUMNAS_X, valores)
+        }
+        return dict(
+            sorted(importancias.items(), key=lambda item: item[1], reverse=True)
         )

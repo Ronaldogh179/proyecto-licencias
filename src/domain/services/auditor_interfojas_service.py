@@ -64,3 +64,23 @@ class AuditorInterFojasService:
             alertas_detectadas=alertas,
             es_conforme_cruce=total_discrepancias == 0,
         )
+
+    @staticmethod
+    def ejecutar_cruce_documental(
+        dni_ruc_formulario: str,
+        dni_ruc_plano_dni: str,
+        area_formulario_m2: float,
+        area_plano_m2: float,
+        direccion_formulario: str,
+        direccion_plano: str,
+    ) -> ResultadoCruceInterFojasDomain:
+        """Alias de dominio usado por el orquestador PMV3-1-HU09."""
+
+        return AuditorInterFojasService.auditar_consistencia_documental(
+            dni_ruc_formulario=dni_ruc_formulario,
+            dni_ruc_plano_dni=dni_ruc_plano_dni,
+            area_formulario_m2=area_formulario_m2,
+            area_plano_m2=area_plano_m2,
+            direccion_formulario=direccion_formulario,
+            direccion_plano=direccion_plano,
+        )

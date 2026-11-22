@@ -3,6 +3,7 @@ from typing import Any, Dict, List, Optional
 from src.application.dto.expediente_dto import IngresoExpedienteInputDTO, ResultadoOCRDTO, ResultadoPrediccionDTO
 from src.domain.entities.expediente import Expediente
 from src.domain.entities.normativa_rag import DictamenAuditoriaPMV2Domain, FragmentoNormativoDomain
+from src.domain.entities.orquestacion_pmv3 import PreDictamenMultiagentePMV3Domain
 from src.domain.entities.usuario import Usuario
 
 class ExtractorOCRPort(ABC):
@@ -117,4 +118,64 @@ class AuditoriaPMV2RepositoryPort(ABC):
         self,
         dictamenes: List[DictamenAuditoriaPMV2Domain],
     ) -> int:
+        pass
+
+
+class OrquestadorMultiagenteLangGraphPort(ABC):
+    """Puerto de salida para el StateGraph multiagente determinista (PMV3-1-HU09)."""
+
+    @abstractmethod
+    def ejecutar_grafo_ciclico_predictamen(self, contexto_entrada: dict) -> dict:
+        pass
+
+
+class GeneradorActaPDFPort(ABC):
+    """Puerto de salida para la exportación del Acta Resolutiva (PMV3-2-HU10)."""
+
+    @abstractmethod
+    def generar_acta_resolutiva_pdf_bytes(
+        self,
+        predictamen: PreDictamenMultiagentePMV3Domain,
+    ) -> bytes:
+        pass
+
+
+class VerificadorTokenPort(ABC):
+    """Puerto de salida para validar tokens JWT en la frontera HTTP."""
+
+    @abstractmethod
+    def verificar_token(self, token: str) -> Dict[str, Any]:
+        pass
+
+
+class GobernanzaPMV3RepositoryPort(ABC):
+    """Puerto de persistencia híbrida para pre-dictámenes y decisiones HITL."""
+
+    @abstractmethod
+    def guardar_predictamen_pmv3(
+        self,
+        predictamen: PreDictamenMultiagentePMV3Domain,
+    ) -> Dict[str, Any]:
+        pass
+
+    @abstractmethod
+    def obtener_predictamen_pmv3_por_codigo(
+        self,
+        codigo_expediente: str,
+    ) -> Optional[PreDictamenMultiagentePMV3Domain]:
+        pass
+
+    @abstractmethod
+    def listar_predictamenes_pmv3(self) -> List[Dict[str, Any]]:
+        pass
+
+    @abstractmethod
+    def registrar_resolucion_hitl_pmv3(
+        self,
+        codigo_expediente: str,
+        decision: str,
+        funcionario: str,
+        observaciones: str,
+        fecha_iso: str,
+    ) -> Dict[str, Any]:
         pass

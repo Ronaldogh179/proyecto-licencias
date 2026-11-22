@@ -32,3 +32,4 @@ class ResultadoPrediccionDTO:
     nombre_algoritmo: str
     importancia_variables: Dict[str, float]
     latencia_ms: float
+    tipo_importancia: str = "global_feature_importance_xgboost"

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>SIMEL - Municipalidad Distrital de El Tambo | PMV 1 + PMV 2</title>
+  <title>SIMEL - Municipalidad Distrital de El Tambo | PMV 1 + PMV 2 + PMV 3</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     html { scroll-behavior: smooth; }
@@ -27,7 +27,7 @@
           <div class="flex h-11 w-11 items-center justify-center rounded-xl bg-amber-500 text-lg font-black text-slate-950">S</div>
           <div>
             <p class="text-lg font-black tracking-wide">SIMEL</p>
-            <p class="text-[10px] uppercase tracking-widest text-slate-400">El Tambo · PMV 1 + 2</p>
+            <p class="text-[10px] uppercase tracking-widest text-slate-400">El Tambo · PMV 1 + 2 + 3</p>
           </div>
         </div>
         <button id="sidebarClose" type="button" class="rounded-lg p-2 text-slate-400 hover:bg-slate-800 hover:text-white lg:hidden" aria-label="Cerrar menú lateral">
@@ -74,6 +74,12 @@
           <span>Data masiva y métricas</span>
         </a>
 
+        <p class="px-3 pb-2 pt-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">PMV 3 · Multiagente</p>
+        <a href="#modulo-pmv3" data-section-link class="group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-300 transition hover:bg-slate-800 hover:text-white">
+          <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-800 text-[11px] font-black text-slate-400 group-hover:bg-slate-700 group-hover:text-white">08</span>
+          <span>LangGraph + HITL</span>
+        </a>
+
         <p class="px-3 pb-2 pt-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">Recursos</p>
         <a href="/docs" target="_blank" rel="noopener" class="group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-300 transition hover:bg-slate-800 hover:text-white">
           <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-800 text-[11px] font-black text-slate-400 group-hover:bg-slate-700 group-hover:text-white">↗</span>
@@ -101,7 +107,7 @@
       <header class="bg-slate-900 text-white shadow-lg border-b-4 border-amber-500">
     <div class="max-w-7xl mx-auto px-6 py-4 flex flex-wrap justify-between items-center gap-4">
       <div>
-        <span class="text-xs uppercase tracking-widest bg-amber-500 text-slate-950 font-bold px-2.5 py-0.5 rounded">Arquitectura Híbrida Hexagonal • PMV 1 + PMV 2</span>
+        <span class="text-xs uppercase tracking-widest bg-amber-500 text-slate-950 font-bold px-2.5 py-0.5 rounded">SIMEL v3.0 — PMV 1 + PMV 2 + PMV 3 (Multi-Agent LangGraph &amp; HITL)</span>
         <h1 class="text-xl font-bold mt-1">SIMEL — Municipalidad Distrital de El Tambo</h1>
         <p class="text-xs text-slate-300">Sistema Inteligente de Evaluación y Fiscalización Documental de Licencias (Ley N.° 28976 | Ley N.° 29733)</p>
         <p class="text-[11px] text-amber-300 font-mono mt-1 break-all">API pública: <span id="currentDomainBadge">window.location.origin</span></p>
@@ -152,7 +158,7 @@
         </div>
         <form id="loginForm" class="flex flex-wrap items-center gap-3">
           <input type="email" id="loginCorreo" value="evaluador@eltambo.gob.pe" class="border rounded-lg px-3 py-1.5 text-sm w-60" placeholder="Correo institucional" required />
-          <input type="password" id="loginPass" value="municipal2026" class="border rounded-lg px-3 py-1.5 text-sm w-36" placeholder="Contraseña" required />
+          <input type="password" id="loginPass" value="" class="border rounded-lg px-3 py-1.5 text-sm w-36" placeholder="Contraseña" required />
           <select id="loginRol" class="border rounded-lg px-3 py-1.5 text-sm">
             <option value="EVALUADOR_LICENCIAS">Evaluador de Licencias</option>
             <option value="MESA_DE_PARTES">Mesa de Partes</option>
@@ -624,7 +630,7 @@
         </div>
         <div class="bg-slate-50 p-4 rounded-xl border-2 border-slate-300 border-l-4 border-l-slate-900">
           <p class="text-xs text-slate-600 uppercase font-bold">Procedimientos Almacenados</p>
-          <p class="text-2xl font-black text-slate-900 mt-1" id="kpiMasivaSP">4 ACTIVOS</p>
+          <p class="text-2xl font-black text-slate-900 mt-1" id="kpiMasivaSP">5 ACTIVOS</p>
           <p class="text-xs text-slate-500">PL/pgSQL + pgvector HNSW</p>
         </div>
         <div class="bg-slate-50 p-4 rounded-xl border-2 border-slate-300 border-l-4 border-l-emerald-600">
@@ -657,6 +663,7 @@
             <li class="flex justify-between gap-2"><span>sp_validar_zonificacion_rag_coseno</span><span class="text-emerald-700 font-black">ACTIVO</span></li>
             <li class="flex justify-between gap-2"><span>sp_registrar_auditoria_cruzada_pmv2</span><span class="text-emerald-700 font-black">ACTIVO</span></li>
             <li class="flex justify-between gap-2"><span>sp_obtener_metricas_pmv1_pmv2</span><span class="text-emerald-700 font-black">ACTIVO</span></li>
+            <li class="flex justify-between gap-2"><span>sp_registrar_resolucion_hitl_pmv3</span><span class="text-emerald-700 font-black">ACTIVO</span></li>
           </ul>
           <p class="text-xs text-slate-600 mt-2">Fuente de métricas: <span id="kpiConsolidadoFuente" class="font-bold">cache_local</span></p>
         </div>
@@ -673,6 +680,146 @@
             </div>
           </div>
           <p class="text-xs text-slate-600 mt-2">La bandeja de la Sección 4 se actualiza automáticamente con paginación y filtro para no congelar el navegador.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECCIÓN 8: PMV 3 - MULTIAGENTE LANGGRAPH & GOBERNANZA HITL (HU09 / HU10) -->
+    <section id="modulo-pmv3" class="bg-white rounded-xl shadow p-6 border border-slate-200">
+      <div class="flex flex-wrap justify-between items-start gap-3 border-b pb-3">
+        <div>
+          <h2 class="text-base font-bold text-slate-900 uppercase">8. Orquestación Multiagente StateGraph (LangGraph T=0.1) y Panel Human-in-the-Loop</h2>
+          <p class="text-xs text-slate-600">4 agentes autónomos con arista condicional cíclica, pre-dictamen explicable, control SLA y Acta Resolutiva PDF firmada por funcionario (Ley N.° 31814).</p>
+        </div>
+        <span class="bg-slate-900 text-amber-400 text-xs font-black px-3 py-1 rounded-full border border-amber-500">PMV 3 · HU09 + HU10</span>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 mt-4">
+        <div class="bg-slate-50 p-4 rounded-xl border-2 border-slate-300">
+          <h3 class="text-sm font-black text-slate-900 uppercase">Ejecutar Grafo Multiagente (4 Nodos)</h3>
+          <form id="formPmv3" class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
+            <div>
+              <label for="pmv3Codigo" class="block text-xs font-bold text-slate-800">Código de expediente</label>
+              <input id="pmv3Codigo" value="EXP-2026-0351" class="w-full border-2 border-slate-300 rounded-lg px-3 py-2 text-sm mt-1 bg-white" required>
+            </div>
+            <div>
+              <label for="pmv3Giro" class="block text-xs font-bold text-slate-800">Giro comercial</label>
+              <select id="pmv3Giro" class="w-full border-2 border-slate-300 rounded-lg px-3 py-2 text-sm mt-1 bg-white">
+                <option>Restaurante</option><option>Bodega</option><option>Oficina</option><option>Panaderia</option><option>Tienda</option>
+              </select>
+            </div>
+            <div>
+              <label for="pmv3Zona" class="block text-xs font-bold text-slate-800">Zona urbana</label>
+              <select id="pmv3Zona" class="w-full border-2 border-slate-300 rounded-lg px-3 py-2 text-sm mt-1 bg-white">
+                <option>CZ</option><option selected>RDM</option><option>CV</option><option>I1</option>
+              </select>
+            </div>
+            <div>
+              <label for="pmv3Area" class="block text-xs font-bold text-slate-800">Área declarada TUPA (m²)</label>
+              <input id="pmv3Area" type="number" step="0.01" value="110.50" class="w-full border-2 border-slate-300 rounded-lg px-3 py-2 text-sm mt-1 bg-white" required>
+            </div>
+            <div>
+              <label for="pmv3AreaPlano" class="block text-xs font-bold text-slate-800">Área plano arquitectura (m²)</label>
+              <input id="pmv3AreaPlano" type="number" step="0.01" value="82.00" class="w-full border-2 border-slate-300 rounded-lg px-3 py-2 text-sm mt-1 bg-white">
+            </div>
+            <div>
+              <label for="pmv3Dni" class="block text-xs font-bold text-slate-800">DNI / RUC TUPA</label>
+              <input id="pmv3Dni" value="20601122334" class="w-full border-2 border-slate-300 rounded-lg px-3 py-2 text-sm mt-1 bg-white">
+            </div>
+            <div>
+              <label for="pmv3Faltantes" class="block text-xs font-bold text-slate-800">Documentos faltantes</label>
+              <input id="pmv3Faltantes" type="number" min="0" max="3" value="2" class="w-full border-2 border-slate-300 rounded-lg px-3 py-2 text-sm mt-1 bg-white">
+            </div>
+            <div>
+              <label for="pmv3Inconsistencias" class="block text-xs font-bold text-slate-800">Inconsistencias</label>
+              <input id="pmv3Inconsistencias" type="number" min="0" max="3" value="1" class="w-full border-2 border-slate-300 rounded-lg px-3 py-2 text-sm mt-1 bg-white">
+            </div>
+            <div>
+              <label for="pmv3Critico" class="block text-xs font-bold text-slate-800">Documento crítico faltante</label>
+              <select id="pmv3Critico" class="w-full border-2 border-slate-300 rounded-lg px-3 py-2 text-sm mt-1 bg-white">
+                <option value="0">No</option><option value="1" selected>Sí (ITSE / plano)</option>
+              </select>
+            </div>
+            <div>
+              <label for="pmv3Dias" class="block text-xs font-bold text-slate-800">Días hábiles transcurridos</label>
+              <input id="pmv3Dias" type="number" min="0" value="2" class="w-full border-2 border-slate-300 rounded-lg px-3 py-2 text-sm mt-1 bg-white">
+            </div>
+            <div class="md:col-span-2">
+              <button id="btnPmv3Orquestar" type="submit" class="bg-slate-900 hover:bg-slate-800 text-white font-black px-5 py-2.5 rounded-xl shadow border-2 border-slate-950">Ejecutar Grafo Multiagente (4 Nodos)</button>
+              <span id="pmv3Status" class="hidden text-xs font-semibold px-3 py-2 rounded-lg ml-2"></span>
+            </div>
+          </form>
+        </div>
+
+        <div class="bg-slate-50 p-4 rounded-xl border-2 border-slate-300">
+          <h3 class="text-sm font-black text-slate-900 uppercase">Visualizador del Grafo de Estados Cíclico</h3>
+          <div id="pmv3Graph" class="grid grid-cols-2 gap-2 mt-3"></div>
+          <div class="grid grid-cols-2 gap-2 mt-3 text-xs">
+            <div class="bg-white p-3 rounded-lg border border-slate-300"><p class="text-slate-600">Iteraciones cíclicas</p><p id="pmv3Iteraciones" class="text-xl font-black text-slate-900">--</p></div>
+            <div class="bg-white p-3 rounded-lg border border-slate-300"><p class="text-slate-600">Latencia total</p><p id="pmv3Latencia" class="text-xl font-black text-slate-900">-- ms</p></div>
+            <div class="bg-white p-3 rounded-lg border border-slate-300"><p class="text-slate-600">Temperatura / Alucinaciones</p><p id="pmv3Temperatura" class="text-lg font-black text-emerald-700">0.1 / 0</p></div>
+            <div class="bg-white p-3 rounded-lg border border-slate-300"><p class="text-slate-600">Recomendación IA</p><p id="pmv3Recomendacion" class="text-sm font-black text-slate-900">--</p></div>
+          </div>
+          <p class="text-xs font-black text-slate-900 uppercase mt-3">Cita legal consolidada</p>
+          <p id="pmv3Cita" class="text-xs text-slate-700 mt-1">--</p>
+          <p class="text-xs font-black text-slate-900 uppercase mt-3">Pre-dictamen técnico explicable</p>
+          <pre id="pmv3Texto" class="mt-1 max-h-56 overflow-auto whitespace-pre-wrap text-[11px] leading-relaxed bg-white p-3 rounded-lg border border-slate-300 text-slate-800">Ejecute el grafo para visualizar el pre-dictamen.</pre>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 mt-5">
+        <div class="bg-amber-50 p-4 rounded-xl border-2 border-amber-300">
+          <h3 class="text-sm font-black text-slate-900 uppercase">Panel de Supervisión Humana Obligatoria (HITL)</h3>
+          <p class="text-xs text-slate-700 mt-1">La decisión final y la firma pertenecen al funcionario evaluador (Ley N.° 31814).</p>
+          <form id="formHitlPmv3" class="grid grid-cols-1 gap-3 mt-3">
+            <div>
+              <label for="pmv3HitlCodigo" class="block text-xs font-bold text-slate-800">Código de expediente</label>
+              <input id="pmv3HitlCodigo" value="EXP-2026-0351" class="w-full border-2 border-slate-300 rounded-lg px-3 py-2 text-sm mt-1 bg-white" required>
+            </div>
+            <div>
+              <label for="pmv3Decision" class="block text-xs font-bold text-slate-800">Decisión administrativa</label>
+              <select id="pmv3Decision" class="w-full border-2 border-slate-300 rounded-lg px-3 py-2 text-sm mt-1 bg-white">
+                <option value="APROBADO_HITL">APROBADO_HITL - Licencia definitiva</option>
+                <option value="OBSERVADO_HITL" selected>OBSERVADO_HITL - Esquela de subsanación</option>
+                <option value="RECHAZADO_HITL">RECHAZADO_HITL - Improcedente por zonificación</option>
+              </select>
+            </div>
+            <div>
+              <label for="pmv3Funcionario" class="block text-xs font-bold text-slate-800">Funcionario firmante</label>
+              <input id="pmv3Funcionario" value="evaluador@eltambo.gob.pe" class="w-full border-2 border-slate-300 rounded-lg px-3 py-2 text-sm mt-1 bg-white" required>
+            </div>
+            <div>
+              <label for="pmv3Observaciones" class="block text-xs font-bold text-slate-800">Sustento administrativo final</label>
+              <textarea id="pmv3Observaciones" rows="3" class="w-full border-2 border-slate-300 rounded-lg px-3 py-2 text-sm mt-1 bg-white" required>Se verifica el pre-dictamen multiagente y se dispone la decisión administrativa conforme a la Ley N.° 28976.</textarea>
+            </div>
+            <div>
+              <button id="btnResolverHitl" type="submit" class="bg-amber-600 hover:bg-amber-700 text-white font-black px-5 py-2.5 rounded-xl shadow border-2 border-amber-800">Confirmar y Firmar Resolución (HITL)</button>
+              <span id="pmv3HitlStatus" class="hidden text-xs font-semibold px-3 py-2 rounded-lg ml-2"></span>
+            </div>
+          </form>
+        </div>
+
+        <div class="bg-slate-50 p-4 rounded-xl border-2 border-slate-300">
+          <div class="flex flex-wrap justify-between items-center gap-2">
+            <h3 class="text-sm font-black text-slate-900 uppercase">Pre-dictámenes PMV 3 registrados</h3>
+            <button onclick="cargarPredictamenesPmv3()" class="bg-slate-100 hover:bg-slate-200 text-slate-900 text-xs font-bold px-3 py-1.5 rounded-lg border-2 border-slate-300">Actualizar</button>
+          </div>
+          <div class="mt-3 max-h-80 overflow-auto border border-slate-300 rounded-lg bg-white">
+            <table class="min-w-full text-xs">
+              <thead class="bg-slate-100 sticky top-0">
+                <tr>
+                  <th class="p-2 text-left font-black">Expediente</th>
+                  <th class="p-2 text-center font-black">Riesgo</th>
+                  <th class="p-2 text-center font-black">Iter.</th>
+                  <th class="p-2 text-center font-black">SLA</th>
+                  <th class="p-2 text-center font-black">Decisión HITL</th>
+                  <th class="p-2 text-center font-black">Acta</th>
+                </tr>
+              </thead>
+              <tbody id="tablaPmv3Predictamenes" class="divide-y divide-slate-200"></tbody>
+            </table>
+          </div>
+          <p class="text-xs text-slate-600 mt-2">Descargue el Acta PDF oficial con membrete municipal y firma Human-in-the-Loop.</p>
         </div>
       </div>
     </section>
@@ -768,7 +915,8 @@
       const tbody = document.getElementById('tablaBandeja');
       tbody.innerHTML = '<tr><td colspan="8" class="p-6 text-center text-slate-500">Cargando bandeja priorizada...</td></tr>';
       try {
-        const res = await fetch('/api/v1/expedientes/bandeja');
+        requireSimelToken();
+        const res = await fetch('/api/v1/expedientes/bandeja', { headers: authHeaders() });
         const data = await res.json();
         bandejaData = data.expedientes || [];
         const altos = bandejaData.filter((expediente) => (expediente.evaluacion_riesgo || {}).nivel_riesgo === 'ALTO').length;
@@ -785,7 +933,8 @@
       const tbody = document.getElementById('tablaNormativas');
       tbody.innerHTML = '<tr><td colspan="8" class="p-6 text-center text-slate-500">Cargando fragmentos normativos...</td></tr>';
       try {
-        const res = await fetch('/api/v1/rag/normativas');
+        requireSimelToken();
+        const res = await fetch('/api/v1/rag/normativas', { headers: authHeaders() });
         const data = await res.json();
         const fragmentos = data.fragmentos || [];
         document.getElementById('ragNormativasTotal').innerText =
@@ -856,7 +1005,8 @@
     async function cargarAuditorias() {
       const tbody = document.getElementById('tablaAuditorias');
       try {
-        const res = await fetch('/api/v1/rag/auditorias');
+        requireSimelToken();
+        const res = await fetch('/api/v1/rag/auditorias', { headers: authHeaders() });
         const data = await res.json();
         const auditorias = data.auditorias || [];
         if (!auditorias.length) {
@@ -900,7 +1050,7 @@
         document.getElementById('kpiMasivaRecall').innerText = (Number(ml.recall ?? 0.969) * 100).toFixed(1) + ' %';
         document.getElementById('kpiMasivaContext').innerText = fmtPct(rag.context_precision ?? 0.942);
         document.getElementById('kpiConsolidadoSimilitud').innerText = fmtPct(rag.similitud_coseno_promedio ?? 0.934);
-        document.getElementById('kpiMasivaSP').innerText = `${sp.total_activos ?? 4} ACTIVOS`;
+        document.getElementById('kpiMasivaSP').innerText = `${sp.total_activos_sistema ?? 5} ACTIVOS`;
         document.getElementById('kpiConsolidadoFuente').innerText = sp.fuente || data.fuente || 'cache_local';
         document.getElementById('kpiConsolidadoAuditorias').innerText = Number(transacciones.total_auditorias_pmv2 ?? 0).toLocaleString('es-PE');
         document.getElementById('kpiConsolidadoFragmentos').innerText = Number(transacciones.total_fragmentos_normativos ?? 0).toLocaleString('es-PE');
@@ -950,7 +1100,7 @@
       try {
         const res = await fetch('/api/v1/rag/indexar-normativa', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: authHeaders({ 'Content-Type': 'application/json' }),
           body: JSON.stringify(payload)
         });
         const json = await res.json();
@@ -1001,7 +1151,7 @@
       try {
         const res = await fetch('/api/v1/rag/auditar-expediente', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: authHeaders({ 'Content-Type': 'application/json' }),
           body: JSON.stringify(payload)
         });
         const json = await res.json();
@@ -1035,7 +1185,7 @@
       try {
         const res = await fetch('/api/v1/expedientes/carga-masiva', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: authHeaders({ 'Content-Type': 'application/json' }),
           body: JSON.stringify({ cantidad })
         });
         const json = await res.json();
@@ -1050,7 +1200,7 @@
           document.getElementById('kpiMasivaF1').innerText = '0.925';
           document.getElementById('kpiMasivaRecall').innerText = '96.9 %';
           document.getElementById('kpiMasivaContext').innerText = fmtPct(json.promedio_context_precision || 0.942);
-          document.getElementById('kpiMasivaSP').innerText = '4 ACTIVOS';
+          document.getElementById('kpiMasivaSP').innerText = '5 ACTIVOS';
           status.className = 'text-xs font-semibold px-3 py-2 rounded-lg bg-emerald-100 border-2 border-emerald-600 text-emerald-950';
           status.innerHTML = `✓ ${json.total_procesados} transacciones procesadas • ALTO ${json.riesgo_alto} / MEDIO ${json.riesgo_medio} / BAJO ${json.riesgo_bajo} • Compatibles ${json.compatibles} / Condicionados ${json.condicionados} / Incompatibles ${json.incompatibles} • Throughput ${json.throughput_exp_seg} exp/seg`;
           await cargarBandeja();
@@ -1102,6 +1252,18 @@
       });
     });
 
+    const SIMEL_TOKEN_KEY = 'simel_jwt';
+    const getSimelToken = () => sessionStorage.getItem(SIMEL_TOKEN_KEY) || '';
+    const authHeaders = (extra = {}) => {
+      const token = getSimelToken();
+      return token ? Object.assign({}, extra, {Authorization: 'Bearer ' + token}) : extra;
+    };
+    const requireSimelToken = () => {
+      if (!getSimelToken()) {
+        throw new Error('Inicie sesión con un funcionario para operar SIMEL.');
+      }
+    };
+
     document.getElementById('loginForm').addEventListener('submit', async (ev) => {
       ev.preventDefault();
       const res = await fetch('/api/v1/auth/login', {
@@ -1117,10 +1279,13 @@
       const box = document.getElementById('tokenBox');
       box.classList.remove('hidden');
       if (res.ok) {
+        sessionStorage.setItem(SIMEL_TOKEN_KEY, json.data.access_token);
         document.getElementById('userName').innerText = json.data.usuario;
         document.getElementById('userRole').innerText = 'Rol: ' + json.data.rol;
         box.innerText = 'TOKEN JWT EMITIDO (HU01): ' + json.data.access_token;
+        await cargarPredictamenesPmv3();
       } else {
+        sessionStorage.removeItem(SIMEL_TOKEN_KEY);
         box.innerText = 'ERROR 401: ' + json.detail;
       }
     });
@@ -1128,7 +1293,8 @@
     document.getElementById('evalForm').addEventListener('submit', async (ev) => {
       ev.preventDefault();
       const formData = new FormData(ev.target);
-      const res = await fetch('/api/v1/expedientes/evaluar', { method: 'POST', body: formData });
+      requireSimelToken();
+      const res = await fetch('/api/v1/expedientes/evaluar', { method: 'POST', headers: authHeaders(), body: formData });
       const json = await res.json();
       if (res.ok) {
         const exp = json.expediente;
@@ -1160,11 +1326,168 @@
       }
     });
 
+    function renderGrafoPmv3(predictamen) {
+      const contenedor = document.getElementById('pmv3Graph');
+      const nodos = predictamen.nodos_ejecutados || [];
+      contenedor.innerHTML = nodos.map((nodo) => {
+        const refinado = nodo.estado_nodo === 'REFINAMIENTO_CICLICO';
+        const clase = refinado
+          ? 'bg-amber-100 border-amber-500 text-amber-900'
+          : 'bg-emerald-50 border-emerald-500 text-emerald-900';
+        return `<div class="p-2.5 rounded-lg border-2 ${clase}">
+          <p class="text-[10px] font-black uppercase">${nodo.orden_ejecucion}. ${escapeHtml(nodo.nombre_agente)}</p>
+          <p class="text-[10px] mt-1">${escapeHtml(nodo.estado_nodo)} · ${Number(nodo.latencia_nodo_ms).toFixed(2)} ms</p>
+          <p class="text-[10px] mt-1 leading-snug">${escapeHtml(nodo.hallazgo_principal)}</p>
+        </div>`;
+      }).join('');
+      document.getElementById('pmv3Iteraciones').innerText = predictamen.iteraciones_grafo;
+      document.getElementById('pmv3Latencia').innerText = Number(predictamen.latencia_total_grafo_ms).toFixed(2) + ' ms';
+      document.getElementById('pmv3Temperatura').innerText = (predictamen.motor_tipo || 'determinista_sin_llm') + ' / alucinaciones: no aplica';
+      document.getElementById('pmv3Recomendacion').innerText = predictamen.recomendacion_ia;
+      document.getElementById('pmv3Cita').innerText = predictamen.cita_legal_consolidada;
+      document.getElementById('pmv3Texto').innerText = predictamen.texto_predictamen_explicable;
+      document.getElementById('pmv3HitlCodigo').value = predictamen.codigo_expediente;
+    }
+
+    async function ejecutarGrafoPmv3(ev) {
+      ev.preventDefault();
+      const status = document.getElementById('pmv3Status');
+      status.classList.remove('hidden');
+      status.className = 'text-xs font-semibold px-3 py-2 rounded-lg ml-2 bg-slate-200 text-slate-800';
+      status.innerText = 'Ejecutando StateGraph multiagente...';
+      const areaPlano = document.getElementById('pmv3AreaPlano').value;
+      const payload = {
+        codigo_expediente: document.getElementById('pmv3Codigo').value.trim(),
+        giro_comercial: document.getElementById('pmv3Giro').value,
+        zona_urbana: document.getElementById('pmv3Zona').value,
+        area_declarada_tupa_m2: Number(document.getElementById('pmv3Area').value),
+        area_plano_arquitectura_m2: areaPlano ? Number(areaPlano) : null,
+        dni_ruc_tupa: document.getElementById('pmv3Dni').value.trim(),
+        dni_ruc_documento_identidad: document.getElementById('pmv3Dni').value.trim(),
+        direccion_tupa: 'Av. Huancavelica 1050 - El Tambo',
+        direccion_plano: 'Av. Huancavelica 1050 - El Tambo',
+        documentos_faltantes: Number(document.getElementById('pmv3Faltantes').value),
+        inconsistencias_detectadas: Number(document.getElementById('pmv3Inconsistencias').value),
+        documento_critico_faltante: Number(document.getElementById('pmv3Critico').value),
+        dias_habiles_transcurridos: Number(document.getElementById('pmv3Dias').value)
+      };
+      try {
+        requireSimelToken();
+        const res = await fetch('/api/v1/pmv3/predictamen/orquestar', {
+          method: 'POST',
+          headers: authHeaders({'Content-Type': 'application/json'}),
+          body: JSON.stringify(payload)
+        });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.detail || 'Error al orquestar el grafo');
+        renderGrafoPmv3(json.predictamen);
+        status.className = 'text-xs font-semibold px-3 py-2 rounded-lg ml-2 bg-emerald-100 text-emerald-900';
+        status.innerText = 'Grafo ejecutado: ' + json.predictamen.iteraciones_grafo + ' iteración(es).';
+        await cargarPredictamenesPmv3();
+      } catch (error) {
+        status.className = 'text-xs font-semibold px-3 py-2 rounded-lg ml-2 bg-red-100 text-red-900';
+        status.innerText = String(error.message || error);
+      }
+    }
+
+    async function cargarPredictamenesPmv3() {
+      const tbody = document.getElementById('tablaPmv3Predictamenes');
+      if (!tbody) return;
+      if (!getSimelToken()) {
+        tbody.innerHTML = '<tr><td colspan="6" class="p-3 text-center text-slate-500">Inicie sesión con un funcionario para ver los pre-dictámenes PMV 3.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = '<tr><td colspan="6" class="p-3 text-center text-slate-500">Cargando pre-dictámenes PMV 3...</td></tr>';
+      try {
+        const res = await fetch('/api/v1/pmv3/predictamenes', {headers: authHeaders()});
+        const data = await res.json();
+        const lista = data.predictamenes || [];
+        if (!lista.length) {
+          tbody.innerHTML = '<tr><td colspan="6" class="p-3 text-center text-slate-500">Sin pre-dictámenes registrados.</td></tr>';
+          return;
+        }
+        tbody.innerHTML = lista.map((p) => {
+          let claseDecision = 'bg-amber-100 text-amber-900 border-amber-500';
+          if (p.decision_final_humano === 'APROBADO_HITL') claseDecision = 'bg-emerald-100 text-emerald-900 border-emerald-500';
+          else if (p.decision_final_humano === 'RECHAZADO_HITL') claseDecision = 'bg-red-100 text-red-900 border-red-500';
+          return `<tr>
+            <td class="p-2 font-mono font-bold">${escapeHtml(p.codigo_expediente)}</td>
+            <td class="p-2 text-center">${escapeHtml(p.nivel_riesgo_ml)}</td>
+            <td class="p-2 text-center">${p.iteraciones_grafo}</td>
+            <td class="p-2 text-center">${escapeHtml(p.estado_semaforo_sla)}</td>
+            <td class="p-2 text-center"><span class="px-2 py-0.5 rounded-full border-2 text-[10px] font-black ${claseDecision}">${escapeHtml(p.decision_final_humano)}</span></td>
+            <td class="p-2 text-center"><button onclick="descargarActaPmv3('${escapeHtml(p.codigo_expediente)}')" class="bg-slate-900 hover:bg-slate-800 text-white text-[10px] font-black px-2.5 py-1 rounded-lg">Descargar Acta PDF</button></td>
+          </tr>`;
+        }).join('');
+      } catch (error) {
+        tbody.innerHTML = `<tr><td colspan="6" class="p-3 text-center text-red-700">${escapeHtml(error.message)}</td></tr>`;
+      }
+    }
+
+    async function resolverHitlPmv3(ev) {
+      ev.preventDefault();
+      const status = document.getElementById('pmv3HitlStatus');
+      status.classList.remove('hidden');
+      status.className = 'text-xs font-semibold px-3 py-2 rounded-lg ml-2 bg-amber-100 text-amber-900';
+      status.innerText = 'Registrando decisión y firma HITL...';
+      const payload = {
+        codigo_expediente: document.getElementById('pmv3HitlCodigo').value.trim(),
+        decision_final_humano: document.getElementById('pmv3Decision').value,
+        funcionario_evaluador: document.getElementById('pmv3Funcionario').value.trim(),
+        observaciones_funcionario: document.getElementById('pmv3Observaciones').value.trim()
+      };
+      try {
+        requireSimelToken();
+        const res = await fetch('/api/v1/pmv3/hitl/resolver', {
+          method: 'POST',
+          headers: authHeaders({'Content-Type': 'application/json'}),
+          body: JSON.stringify(payload)
+        });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.detail || 'Error al registrar la decisión HITL');
+        renderGrafoPmv3(json.predictamen);
+        status.className = 'text-xs font-semibold px-3 py-2 rounded-lg ml-2 bg-emerald-100 text-emerald-900';
+        status.innerText = 'Decisión firmada: ' + json.predictamen.decision_final_humano + ' (auditoría inmutable).';
+        await cargarPredictamenesPmv3();
+      } catch (error) {
+        status.className = 'text-xs font-semibold px-3 py-2 rounded-lg ml-2 bg-red-100 text-red-900';
+        status.innerText = String(error.message || error);
+      }
+    }
+
+    async function descargarActaPmv3(codigoExpediente) {
+      try {
+        requireSimelToken();
+        const res = await fetch('/api/v1/pmv3/acta-pdf/' + encodeURIComponent(codigoExpediente), {
+          headers: authHeaders()
+        });
+        if (!res.ok) {
+          const json = await res.json();
+          throw new Error(json.detail || 'No se pudo generar el Acta PDF.');
+        }
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const enlace = document.createElement('a');
+        enlace.href = url;
+        enlace.download = 'ACTA_SIMEL_' + codigoExpediente + '.pdf';
+        document.body.appendChild(enlace);
+        enlace.click();
+        enlace.remove();
+        URL.revokeObjectURL(url);
+      } catch (error) {
+        alert(String(error.message || error));
+      }
+    }
+
+    document.getElementById('formPmv3').addEventListener('submit', ejecutarGrafoPmv3);
+    document.getElementById('formHitlPmv3').addEventListener('submit', resolverHitlPmv3);
+
     Promise.allSettled([
       cargarBandeja(),
       cargarNormativas(),
       cargarAuditorias(),
-      cargarMetricasConsolidado()
+      cargarMetricasConsolidado(),
+      cargarPredictamenesPmv3()
     ]);
   </script>
 </body>

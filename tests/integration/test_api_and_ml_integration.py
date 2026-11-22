@@ -6,12 +6,32 @@ from src.infrastructure.container import container
 client = TestClient(app)
 
 
+def _login_pmv3(
+    correo: str = "evaluador@eltambo.gob.pe",
+    rol: str = "EVALUADOR_LICENCIAS",
+) -> dict:
+    respuesta = client.post(
+        "/api/v1/auth/login",
+        json={
+            "correo": correo,
+            "password": "municipal2026",
+            "rol": rol,
+        },
+    )
+    assert respuesta.status_code == 200
+    token = respuesta.json()["data"]["access_token"]
+    return {"Authorization": f"Bearer {token}"}
+
+
+AUTH_HEADERS = _login_pmv3()
+
+
 def test_integracion_endpoint_dashboard_y_bandeja_priorizada():
     res_html = client.get("/")
     assert res_html.status_code == 200
     assert "SIMEL" in res_html.text
 
-    res_bandeja = client.get("/api/v1/expedientes/bandeja")
+    res_bandeja = client.get("/api/v1/expedientes/bandeja", headers=AUTH_HEADERS)
     assert res_bandeja.status_code == 200
     body = res_bandeja.json()
     assert body["total"] >= 3
@@ -42,6 +62,7 @@ def test_integracion_flujo_completo_con_pdf_real_ocr_y_ambos_modelos():
     # Prueba con XGBoost (Strategy 1) leyendo bytes reales de PDF
     res_xgb = client.post(
         "/api/v1/expedientes/evaluar",
+        headers=AUTH_HEADERS,
         data={
             "codigo_expediente": "EXP-2026-0351",
             "dni_ruc_titular": "20601122334",
@@ -61,6 +82,7 @@ def test_integracion_flujo_completo_con_pdf_real_ocr_y_ambos_modelos():
     # Prueba con Random Forest (Strategy 2) para riesgo medio/bajo
     res_rf = client.post(
         "/api/v1/expedientes/evaluar",
+        headers=AUTH_HEADERS,
         data={
             "codigo_expediente": "EXP-2026-0352",
             "dni_ruc_titular": "10445566778",
@@ -81,6 +103,7 @@ def test_integracion_flujo_completo_con_pdf_real_ocr_y_ambos_modelos():
 def test_pmv2_endpoints_rag_y_cruce_interfojas():
     res_index = client.post(
         "/api/v1/rag/indexar-normativa",
+        headers=AUTH_HEADERS,
         json={
             "id_fragmento": "FRAG-HU06-INTEGRATION-5610-RDM",
             "norma_origen": "Ordenanza Municipal N.° 018-2024-MDT/CM",
@@ -111,6 +134,7 @@ def test_pmv2_endpoints_rag_y_cruce_interfojas():
 
     res_audit = client.post(
         "/api/v1/rag/auditar-expediente",
+        headers=AUTH_HEADERS,
         json={
             "codigo_expediente": "EXP-2026-HU08-INTEGRATION",
             "giro_comercial": "Restaurante",
@@ -158,6 +182,7 @@ def test_pmv2_endpoints_rag_y_cruce_interfojas():
 def test_pmv2_carga_masiva_500_transacciones_y_metricas():
     res_masiva = client.post(
         "/api/v1/expedientes/carga-masiva",
+        headers=AUTH_HEADERS,
         json={"cantidad": 500},
     )
     assert res_masiva.status_code == 200
@@ -199,17 +224,18 @@ def test_pmv2_carga_masiva_500_transacciones_y_metricas():
 
 
 def test_pmv2_listados_router_legacy_y_validaciones_422():
-    res_normativas = client.get("/api/v1/rag/normativas")
+    res_normativas = client.get("/api/v1/rag/normativas", headers=AUTH_HEADERS)
     assert res_normativas.status_code == 200
     assert res_normativas.json()["total"] >= 20
     assert res_normativas.json()["motor_vectorial"].startswith("pgvector HNSW")
 
-    res_auditorias = client.get("/api/v1/rag/auditorias")
+    res_auditorias = client.get("/api/v1/rag/auditorias", headers=AUTH_HEADERS)
     assert res_auditorias.status_code == 200
     assert res_auditorias.json()["total"] >= 1
 
     res_index = client.post(
         "/api/v1/pmv2/normativa/indexar",
+        headers=AUTH_HEADERS,
         json={
             "id_fragmento": "FRAG-LEGACY-HU06-6910-CZ",
             "norma_origen": "Ordenanza Municipal N.° 018-2024-MDT/CM",
@@ -230,6 +256,7 @@ def test_pmv2_listados_router_legacy_y_validaciones_422():
 
     res_audit = client.post(
         "/api/v1/pmv2/auditorias/auditar",
+        headers=AUTH_HEADERS,
         json={
             "codigo_expediente": "EXP-2026-LEGACY-CONFORME",
             "giro_comercial": "Bodega",
@@ -247,7 +274,7 @@ def test_pmv2_listados_router_legacy_y_validaciones_422():
     assert res_audit.json()["dictamen"]["estado_auditoria_pmv2"] == "CONFORME_PMV2"
     assert res_audit.json()["dictamen"]["compatibilidad_zonificacion"] == "COMPATIBLE"
 
-    res_historial = client.get("/api/v1/pmv2/auditorias")
+    res_historial = client.get("/api/v1/pmv2/auditorias", headers=AUTH_HEADERS)
     assert res_historial.status_code == 200
     assert res_historial.json()["total"] >= 1
 
@@ -261,18 +288,188 @@ def test_pmv2_listados_router_legacy_y_validaciones_422():
 
     res_index_invalido = client.post(
         "/api/v1/rag/indexar-normativa",
+        headers=AUTH_HEADERS,
         json={"texto_fragmento_chunk": "   "},
     )
     assert res_index_invalido.status_code == 422
 
     res_masiva_invalida = client.post(
         "/api/v1/expedientes/carga-masiva",
+        headers=AUTH_HEADERS,
         json={"cantidad": 499},
     )
     assert res_masiva_invalida.status_code == 422
 
     res_legacy_invalida = client.post(
         "/api/v1/pmv2/data-masiva",
+        headers=AUTH_HEADERS,
         json={"cantidad_transacciones": 499},
     )
     assert res_legacy_invalida.status_code == 422
+
+
+def test_pmv3_endpoints_multiagente_hitl_acta_y_alias():
+    payload = {
+        "codigo_expediente": "EXP-2026-PMV3-INTEGRATION",
+        "giro_comercial": "Restaurante",
+        "zona_urbana": "RDM",
+        "area_declarada_tupa_m2": 110.5,
+        "area_plano_arquitectura_m2": 82.0,
+        "dni_ruc_tupa": "20601122334",
+        "dni_ruc_documento_identidad": "10728491023",
+        "direccion_tupa": "Av. Huancavelica N. 1050 - El Tambo",
+        "direccion_plano": "Av. Huancavelica N. 1050 - El Tambo",
+        "documentos_faltantes": 2,
+        "inconsistencias_detectadas": 1,
+        "documento_critico_faltante": 1,
+        "dias_habiles_transcurridos": 2,
+    }
+    headers = _login_pmv3()
+    res_orquestar = client.post(
+        "/api/v1/pmv3/predictamen/orquestar", json=payload, headers=headers
+    )
+    assert res_orquestar.status_code == 200
+    body_orquestar = res_orquestar.json()
+    assert body_orquestar["status"] == "success"
+    assert body_orquestar["procedimiento_almacenado"] == "upsert_rest_predictamenes_pmv3"
+    assert body_orquestar["mecanismo_persistencia"] == "upsert_rest_predictamenes_pmv3"
+    predictamen = body_orquestar["predictamen"]
+    assert predictamen["codigo_expediente"] == "EXP-2026-PMV3-INTEGRATION"
+    assert predictamen["iteraciones_grafo"] == 2
+    assert len(predictamen["nodos_ejecutados"]) == 6
+    assert predictamen["temperatura_llm"] == 0.1
+    assert predictamen["alucinaciones_detectadas"] == 0
+    assert predictamen["decision_final_humano"] == "PENDIENTE_REVISION_HITL"
+    assert predictamen["estado_semaforo_sla"] == "DENTRO_DEL_PLAZO_LEGAL"
+    assert predictamen["cumple_sla_legal"] is True
+    assert "28976" in predictamen["cita_legal_consolidada"]
+    assert "31814" in predictamen["cita_legal_consolidada"]
+    assert any(
+        nodo["estado_nodo"] == "REFINAMIENTO_CICLICO"
+        for nodo in predictamen["nodos_ejecutados"]
+    )
+
+    res_listar = client.get("/api/v1/pmv3/predictamenes", headers=headers)
+    assert res_listar.status_code == 200
+    body_listar = res_listar.json()
+    assert body_listar["status"] == "success"
+    assert body_listar["total"] >= 3
+    codigos = [item["codigo_expediente"] for item in body_listar["predictamenes"]]
+    assert "EXP-2026-PMV3-INTEGRATION" in codigos
+    assert "EXP-2026-0348" in codigos
+
+    res_hitl = client.post(
+        "/api/v1/pmv3/hitl/resolver",
+        json={
+            "codigo_expediente": "EXP-2026-PMV3-INTEGRATION",
+            "decision_final_humano": "OBSERVADO_HITL",
+            "funcionario_evaluador": "evaluador@eltambo.gob.pe",
+            "observaciones_funcionario": "Se notifica esquela de subsanacion documental.",
+        },
+        headers=headers,
+    )
+    assert res_hitl.status_code == 200
+    body_hitl = res_hitl.json()
+    assert body_hitl["status"] == "success"
+    assert body_hitl["auditoria_inmutable"] is True
+    assert body_hitl["procedimiento_almacenado"] == "sp_registrar_resolucion_hitl_pmv3"
+    assert body_hitl["predictamen"]["decision_final_humano"] == "OBSERVADO_HITL"
+    assert body_hitl["predictamen"]["funcionario_evaluador_firma"] == "evaluador@eltambo.gob.pe"
+
+    res_pdf = client.get(
+        "/api/v1/pmv3/acta-pdf/EXP-2026-PMV3-INTEGRATION", headers=headers
+    )
+    assert res_pdf.status_code == 200
+    assert res_pdf.headers["content-type"] == "application/pdf"
+    assert "ACTA_SIMEL_EXP-2026-PMV3-INTEGRATION.pdf" in res_pdf.headers["content-disposition"]
+    assert res_pdf.content.startswith(b"%PDF-")
+
+    res_alias_orquestar = client.post(
+        "/api/v1/agentes/orquestar-predictamen", json=payload, headers=headers
+    )
+    assert res_alias_orquestar.status_code == 200
+    assert res_alias_orquestar.json()["status"] == "success"
+
+    res_alias_listar = client.get("/api/v1/agentes/predictamenes", headers=headers)
+    assert res_alias_listar.status_code == 200
+    assert res_alias_listar.json()["total"] >= 3
+
+    res_alias_hitl = client.post(
+        "/api/v1/hitl/resolver-dictamen",
+        json={
+            "codigo_expediente": "EXP-2026-PMV3-INTEGRATION",
+            "decision_final_humano": "APROBADO_HITL",
+            "funcionario_evaluador": "evaluador@eltambo.gob.pe",
+            "observaciones_funcionario": "Se aprueba la licencia tras verificar el pre-dictamen.",
+        },
+        headers=headers,
+    )
+    assert res_alias_hitl.status_code == 200
+    assert res_alias_hitl.json()["predictamen"]["decision_final_humano"] == "APROBADO_HITL"
+
+    res_alias_pdf = client.get(
+        "/api/v1/hitl/exportar-acta/EXP-2026-PMV3-INTEGRATION", headers=headers
+    )
+    assert res_alias_pdf.status_code == 200
+    assert res_alias_pdf.content.startswith(b"%PDF-")
+
+
+def test_pmv3_metricas_consolidadas_y_validaciones_422():
+    headers = _login_pmv3()
+    res_metricas = client.get("/api/v1/metricas/consolidado")
+    assert res_metricas.status_code == 200
+    body_metricas = res_metricas.json()
+    assert body_metricas["status"] == "ok"
+    sp = body_metricas["stored_procedures"]
+    assert sp["total_activos"] == 4
+    assert sp["total_activos_pmv3"] == 1
+    assert sp["total_activos_sistema"] == 5
+    assert sp["sp_registrar_resolucion_hitl_pmv3"] == "ACTIVO"
+    pmv3 = body_metricas["pmv3_multiagente_hitl"]
+    assert pmv3["total_predictamenes_pmv3"] >= 3
+    assert pmv3["tasa_supervision_humana_pct"] == 100.0
+    assert pmv3["tasa_cumplimiento_sla_pct"] == 100.0
+    assert pmv3["alucinaciones_normativas"] == 0
+    assert pmv3["alucinaciones_normativas_tipo"] == "no_aplica_sin_llm_generativo"
+    assert pmv3["temperatura_determinista"] == 0.1
+    assert pmv3["motor_tipo"] == "determinista_sin_llm"
+    assert (
+        pmv3["context_precision_pmv3_tipo"]
+        == "heuristica_experimental_derivada_de_similitud_coseno"
+    )
+
+    res_area_invalida = client.post(
+        "/api/v1/pmv3/predictamen/orquestar",
+        json={
+            "codigo_expediente": "EXP-2026-PMV3-AREA-0",
+            "giro_comercial": "Bodega",
+            "zona_urbana": "CZ",
+            "area_declarada_tupa_m2": 0.0,
+        },
+        headers=headers,
+    )
+    assert res_area_invalida.status_code == 422
+
+    res_decision_invalida = client.post(
+        "/api/v1/pmv3/hitl/resolver",
+        json={
+            "codigo_expediente": "EXP-2026-0348",
+            "decision_final_humano": "DECISION_INVENTADA",
+            "funcionario_evaluador": "evaluador@eltambo.gob.pe",
+            "observaciones_funcionario": "Sustento administrativo suficiente.",
+        },
+        headers=headers,
+    )
+    assert res_decision_invalida.status_code == 422
+
+    res_sustento_invalido = client.post(
+        "/api/v1/pmv3/hitl/resolver",
+        json={
+            "codigo_expediente": "EXP-2026-0348",
+            "decision_final_humano": "APROBADO_HITL",
+            "funcionario_evaluador": "evaluador@eltambo.gob.pe",
+            "observaciones_funcionario": "abc",
+        },
+        headers=headers,
+    )
+    assert res_sustento_invalido.status_code == 422
