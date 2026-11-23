@@ -6,7 +6,7 @@
 
 **Entorno remoto:** https://proyecto-licencias.onrender.com
 
-**Resultado local:** 61/61 pruebas PASS (41 unitarias + 20 integración), base de datos aislada
+**Resultado local:** 70/70 pruebas PASS (46 unitarias + 24 integración), base de datos aislada
 
 **Resultado remoto:** 9/9 pruebas base PASS y 5/5 pruebas PMV 3 PASS tras el despliegue v3.0.0.
 
@@ -87,7 +87,7 @@ Comando base:
 | UNIT-27 | `test_guardar_predictamen_fallido_revierte_estado` | Fallo HTTP 503 al persistir pre-dictamen revierte caché local. | PASS |
 | UNIT-28 | `test_registrar_hitl_fallido_revierte_decision` | Fallo de RPC HITL revierte decisión, firma y archivo local. | PASS |
 
-**Resultado local:** `61 passed`, `1 warning` (deprecación de `starlette.testclient` con `httpx`), cobertura total `91%`.
+**Resultado local:** `70 passed`, `1 warning` (deprecación de `starlette.testclient` con `httpx`), cobertura total `91%`.
 
 ### 2.1 Pruebas de regresión OCR y formulario (22/11/2026)
 
@@ -106,6 +106,20 @@ Comando base:
 | REG-11 | `test_evaluar_exige_sesion_valida_y_rol_autorizado` | 401 sin JWT y 403 para rol sin permisos. | PASS |
 | REG-12 | `test_evaluar_rechaza_modo_indicadores_invalido` | Validación 422 del modo de indicadores. | PASS |
 | REG-13 | `test_web_ui_ocr_regression.py` (4 pruebas) | Progreso, bloqueo de duplicados, errores, panel sin datos de ejemplo, texto y confianza real. | PASS |
+
+### 2.2 Pruebas de autenticación HU01 y pantalla de login (22/11/2026)
+
+| ID | Archivo / prueba | Objetivo | Resultado |
+|---|---|---|---|
+| AUTH-01 | `test_pantalla_login_dedicada_con_identidad_y_sin_selector_rol` | Pantalla de login visible, identidad SIMEL y ausencia de selector de rol. | PASS |
+| AUTH-02 | `test_login_envia_solo_correo_y_password_y_muestra_errores_claros` | El cliente envía solo correo/contraseña y muestra validaciones claras. | PASS |
+| AUTH-03 | `test_sesion_guarda_usuario_rol_y_permite_cerrar_sesion` | Sesión con usuario/rol y cierre de sesión funcional. | PASS |
+| AUTH-04 | `test_sesion_vencida_muestra_login_y_permite_reingreso` | Token vencido limpia la sesión, muestra login y permite reingresar. | PASS |
+| AUTH-05 | `test_password_se_puede_mostrar_u_ocultar_y_no_se_expone_token` | Mostrar/ocultar contraseña y token fuera de la interfaz visible. | PASS |
+| AUTH-06 | `test_login_sin_rol_deriva_rol_desde_la_cuenta` | El backend deriva el rol desde la cuenta cuando el cliente no lo envía. | PASS |
+| AUTH-07 | `test_login_con_password_incorrecta_devuelve_401` | Credenciales inválidas rechazadas con 401. | PASS |
+| AUTH-08 | `test_acceso_sin_sesion_y_token_vencido_devuelven_401` | Acceso sin sesión y token vencido rechazados con 401. | PASS |
+| AUTH-09 | `test_carga_de_pdf_despues_del_login` | Flujo PDF/OCR operativo después de autenticarse. | PASS |
 
 ## 3. Pruebas remotas de humo
 
@@ -127,6 +141,8 @@ Comando base:
 | REM-14 | PMV 3 métricas HITL | 5 SP activos, supervisión humana 100%. | PASS — `SP=5`, `PMV3=5`. |
 
 **Resultado remoto base:** `9/9 PASS`. **Resultado remoto PMV 3:** `5/5 PASS`. La verificación se ejecutó con token JWT firmado para `EVALUADOR_LICENCIAS`; el REM con contraseña requiere configurar `SIMEL_REMOTE_USER` y `SIMEL_REMOTE_PASSWORD`.
+
+**Verificación manual adicional (22/11/2026):** login real en Render HTTP 200 con la cuenta de prueba institucional, rol `EVALUADOR_LICENCIAS`, y bandeja autorizada HTTP 200 con `total=507`. No se registraron tokens en la evidencia.
 
 ## 4. Evidencia de la última ejecución
 

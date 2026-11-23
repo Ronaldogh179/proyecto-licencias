@@ -11,7 +11,7 @@ from fastapi import (
     Response,
     UploadFile,
 )
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from src.adapters.inbound.api.dependencies import (
     ROL_ADMIN_TI,
@@ -47,9 +47,9 @@ MAX_PDF_BYTES = 25 * 1024 * 1024
 MODOS_INDICADORES = {"automatico", "manual"}
 
 class LoginRequest(BaseModel):
-    correo: str
-    password: str
-    rol: str = ""
+    correo: str = Field(..., description="Correo institucional del funcionario")
+    password: str = Field(..., description="Contraseña institucional")
+    rol: str = Field("", description="Opcional; el rol efectivo se obtiene de la cuenta autenticada")
 
 @router.post("/auth/login", summary="PMV1-1-HU01: Autenticación Institucional JWT")
 def login_funcionario(req: LoginRequest, request: Request):

@@ -7,7 +7,7 @@
 [![Supabase](https://img.shields.io/badge/Supabase-pgvector-3ECF8E?logo=supabase&logoColor=white)](https://supabase.com/)
 [![PyMuPDF](https://img.shields.io/badge/PyMuPDF-PDF-EF3939)](https://pymupdf.readthedocs.io/)
 [![XGBoost](https://img.shields.io/badge/XGBoost-ML-FF6600)](https://xgboost.readthedocs.io/)
-[![pytest](https://img.shields.io/badge/pytest-61%20passed-0A9EDC?logo=pytest&logoColor=white)](PLAN_DE_PRUEBAS.md)
+[![pytest](https://img.shields.io/badge/pytest-70%20passed-0A9EDC?logo=pytest&logoColor=white)](PLAN_DE_PRUEBAS.md)
 [![Coverage](https://img.shields.io/badge/coverage-91%25-brightgreen)](PLAN_DE_PRUEBAS.md)
 [![Version](https://img.shields.io/badge/version-3.0.0-blue)](README.md)
 
@@ -34,7 +34,7 @@ Plataforma web para la evaluación, fiscalización y auditoría documental de li
 | PMV 1 | OCR, XGBoost/Random Forest, SLA y bandeja priorizada. | Completado |
 | PMV 2 | RAG normativo pgvector, cruce inter-fojas y dictámenes explicables. | Completado |
 | PMV 3 | StateGraph multiagente, supervisión HITL, SLA y Acta Resolutiva PDF. | Completado |
-| Calidad | 61 pruebas locales aisladas (41 unitarias + 20 de integración), cobertura 91% y 5 procedimientos almacenados declarados. | Completado |
+| Calidad | 70 pruebas locales aisladas (46 unitarias + 24 de integración), cobertura 91% y 5 procedimientos almacenados declarados. | Completado |
 
 ## Stack tecnológico
 
@@ -52,7 +52,7 @@ Marco normativo considerado: Ley N.° 28976 (Ley Marco de Licencia de Funcionami
 
 ## Flujo de uso
 
-1. Ingresa a la aplicación y autentícate con JWT institucional.
+1. Ingresa a la aplicación con tu correo institucional y contraseña; el rol se deriva de la cuenta.
 2. Registra o carga un expediente TUPA con su PDF.
 3. El motor OCR extrae variables y los modelos ML estiman el riesgo de observación.
 4. El motor RAG recupera la normativa aplicable y ejecuta el cruce inter-fojas.
@@ -68,6 +68,7 @@ Marco normativo considerado: Ley N.° 28976 (Ley Marco de Licencia de Funcionami
 - Predicción del riesgo de observación con XGBoost como modelo principal y Random Forest como respaldo.
 - Cálculo de SLA, priorización de la bandeja y persistencia híbrida (Supabase + caché local).
 - Autenticación institucional con JWT firmado mediante HMAC-SHA256.
+- Pantalla de acceso HU01 con correo/contraseña, identidad SIMEL, mensajes de error claros, mostrar/ocultar contraseña, cierre de sesión y manejo de expiración/401; el rol se obtiene de la cuenta y no se elige en el cliente.
 - OCR híbrido: PyMuPDF extrae texto nativo y Tesseract procesa las páginas escaneadas. El formulario ofrece modo automático (indicadores estimados desde el PDF, sujetos a revisión) o manual (respeta los valores del evaluador) y valida PDF vacíos, dañados o protegidos con contraseña.
 
 ### PMV 2: RAG normativo y auditoría inter-fojas
@@ -287,8 +288,9 @@ También se puede ejecutar el plan completo con doble clic en `EJECUTAR_PRUEBAS.
 
 Resultado verificado en `main`:
 
-- 61 pruebas locales aprobadas (41 unitarias + 20 de integración), ejecutadas con base de datos aislada.
+- 70 pruebas locales aprobadas (46 unitarias + 24 de integración), ejecutadas con base de datos aislada.
 - Cobertura total: 91% (`pytest --cov=src`).
+- Login real verificado en Render: HTTP 200 con la cuenta de prueba institucional y bandeja autorizada HTTP 200 (`total=507`).
 - 9 pruebas remotas base aprobadas y 5 pruebas PMV 3 aprobadas tras el despliegue v3.0.0.
 - Detalle y resultados finales en `CIERRE_TECNICO_PMV3.md` y `PLAN_DE_PRUEBAS.md`.
 
@@ -319,6 +321,7 @@ Resultado verificado en `main`:
 - Las pruebas de integración y el plan de pruebas remoto permiten validar el despliegue sin hardcodear hosts locales.
 - Todas las operaciones de negocio PMV 1, PMV 2 y PMV 3 exigen JWT Bearer; las operaciones de escritura requieren `EVALUADOR_LICENCIAS` o `ADMIN_TI` y las consultas permiten también a `MESA_DE_PARTES`.
 - En staging/producción los funcionarios se leen de `usuarios` en Supabase; los usuarios demo solo existen en desarrollo/pruebas. Las contraseñas se verifican con PBKDF2-HMAC-SHA256.
+- La pantalla de login no permite seleccionar rol: el backend lo deriva de la cuenta y rechaza cualquier rol declarado por el cliente que no coincida.
 - Si falla la persistencia PMV 3 en Supabase, la API responde `503`, revierte el estado local y no confirma la decisión HITL.
 - `database_migrations/20261121_pmv3_incremental.sql` fue aplicado en Supabase y verificado: RLS activo, seis columnas HITL en `dictamenes_auditoria`, permisos de `service_role` y sin acceso directo anónimo.
 - En el PMV 3, la IA solo recomienda: la decisión final y la firma son siempre del funcionario evaluador (Ley N.° 31814).
