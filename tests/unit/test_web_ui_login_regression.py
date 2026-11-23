@@ -15,6 +15,7 @@ def test_pantalla_login_dedicada_con_identidad_y_sin_selector_rol():
     assert 'id="loginRol"' not in HTML
     assert 'name="rol"' not in HTML
     assert "Iniciar sesión" in HTML
+    assert "PMV1-1-HU01 · Autenticación y control de acceso" in HTML
     assert "SIMEL" in HTML
     assert "Municipalidad Distrital de El Tambo" in HTML
 
